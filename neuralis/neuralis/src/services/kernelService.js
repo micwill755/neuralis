@@ -307,10 +307,14 @@ class KernelService {
     
     console.log('Sending execute request:', msgId);
     
-    // Send the message
-    this.ws.send(JSON.stringify(message));
-    
-    return msgId;
+    try {
+      // Send the message
+      this.ws.send(JSON.stringify(message));
+      return msgId;
+    } catch (error) {
+      console.error('Error sending message to kernel:', error);
+      throw new Error(`Failed to send code to kernel: ${error.message}`);
+    }
   }
 
   /**

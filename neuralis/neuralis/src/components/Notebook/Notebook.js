@@ -160,15 +160,20 @@ const Notebook = ({ notebook, onUpdateCells }) => {
       await kernelService.executeCode(cellToRun.content, (result) => {
         if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
           // Update the output for this cell
-          setCellOutputs(prev => ({
-            ...prev,
-            [activeCell]: {
-              status: 'success',
-              output: (prev[activeCell]?.output || '') + result.content,
-              imageData: result.imageData,
-              executionCount: result.executionCount
-            }
-          }));
+          setCellOutputs(prev => {
+            const currentOutput = prev[activeCell]?.output || '';
+            const currentImageData = prev[activeCell]?.imageData;
+            
+            return {
+              ...prev,
+              [activeCell]: {
+                status: 'success',
+                output: result.content ? currentOutput + result.content : currentOutput,
+                imageData: result.imageData || currentImageData,
+                executionCount: result.executionCount || prev[activeCell]?.executionCount
+              }
+            };
+          });
         } else if (result.type === 'error') {
           setCellOutputs(prev => ({
             ...prev,

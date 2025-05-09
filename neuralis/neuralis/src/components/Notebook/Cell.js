@@ -71,10 +71,22 @@ const OutputImage = styled.img`
   margin: 10px 0;
 `;
 
+// Function to clean ANSI color codes from output
+const cleanAnsiCodes = (text) => {
+  if (!text) return '';
+  // Remove ANSI color codes and other terminal formatting
+  return text.replace(/\\033\[\d+(;\d+)*m|\[\d+(;\d+)*m/g, '')
+             .replace(/\\u001b\[\d+(;\d+)*m/g, '')
+             .replace(/\u001b\[\d+(;\d+)*m/g, '');
+};
+
 const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
   const handleEditorChange = (value) => {
     onChange(id, value);
   };
+  
+  // Clean output text from ANSI codes
+  const cleanedOutput = output?.output ? cleanAnsiCodes(output.output) : '';
   
   return (
     <CellContainer isActive={isActive} onClick={() => onFocus(id)}>
@@ -125,7 +137,7 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
       {/* Display cell output if available */}
       {type === 'code' && output && (
         <CellOutput status={output.status}>
-          {output.output}
+          {cleanedOutput}
           
           {/* Display image if available */}
           {output.imageData && (
