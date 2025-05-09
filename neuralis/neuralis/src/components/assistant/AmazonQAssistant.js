@@ -44,20 +44,39 @@ const Message = styled.div`
     border: 1px solid #ddd;
   `}
   white-space: pre-wrap;
+`;
+
+const CodeBlock = styled.div`
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 10px 0;
+  position: relative;
+`;
+
+const CodeContent = styled.pre`
+  padding: 12px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: #f5f5f5;
+  color: #28a745; /* Green text color for code */
+`;
+
+const InsertCodeButton = styled.button`
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin-top: 8px;
+  cursor: pointer;
+  font-size: 13px;
   
-  pre {
-    background-color: #f5f5f5;
-    padding: 10px;
-    border-radius: 4px;
-    overflow-x: auto;
-    margin: 8px 0;
-  }
-  
-  code {
-    font-family: monospace;
-    background-color: #f5f5f5;
-    padding: 2px 4px;
-    border-radius: 3px;
+  &:hover {
+    background-color: #218838;
   }
 `;
 
@@ -108,30 +127,12 @@ const SendButton = styled.button`
   }
 `;
 
-const InsertButton = styled.button`
-  padding: 8px 16px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #218838;
-  }
-  
-  &:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-  }
-`;
-
 // Helper function to extract code blocks from a message
 const extractCodeBlocks = (message) => {
   if (!message) return [];
   
   // Regex to find code blocks (text between triple backticks)
-  const codeBlockRegex = /```(?:python)?\n?([\s\S]*?)```/g;
+  const codeBlockRegex = /```(?:python|javascript|java|html|css|bash|shell|sql|json|xml|yaml|typescript|jsx|tsx|markdown|md|text|plain|r|ruby|php|go|c|cpp|csharp|swift)?\n?([\s\S]*?)```/g;
   const matches = [];
   let match;
   
@@ -139,7 +140,34 @@ const extractCodeBlocks = (message) => {
     matches.push(match[1].trim());
   }
   
+  // Also look for code blocks that might be indicated by Amazon Q CLI formatting
+  // This regex looks for blocks of text that appear to be code (indented or with special markers)
+  const cliCodeRegex = /m10m([\s\S]*?)mmm/g;
+  while ((match = cliCodeRegex.exec(message)) !== null) {
+    matches.push(match[1].trim());
+  }
+  
   return matches;
+};
+
+// Clean up Amazon Q CLI output by removing control characters and formatting
+const cleanQOutput = (text) => {
+  if (!text) return '';
+  
+  // Remove ANSI color codes and other terminal formatting
+  let cleaned = text
+    .replace(/\u001b\[\d+(;\d+)*m/g, '') // ANSI escape sequences
+    .replace(/\d+m/g, '')               // Color codes
+    .replace(/⠋|⠙|⠹|⠸|⠼|✓/g, '')        // Spinner characters
+    
+  // Try to extract clean code blocks
+  const codeBlocks = extractCodeBlocks(cleaned);
+  if (codeBlocks.length > 0) {
+    // If we found code blocks, return the first one as clean code
+    return codeBlocks[0];
+  }
+  
+  return cleaned;
 };
 
 const AmazonQAssistant = () => {
@@ -242,6 +270,36 @@ const AmazonQAssistant = () => {
     return null;
   };
   
+  // Render message with code blocks highlighted
+  const renderMessage = (message) => {
+    if (message.isLoading) return 'Thinking...';
+    if (message.isUser) return message.content;
+    
+    const codeBlocks = extractCodeBlocks(message.content);
+    
+    if (codeBlocks.length === 0) {
+      return message.content;
+    }
+    
+    // If there's code, display it in a code block with an insert button
+    const cleanCode = codeBlocks[0]; // Use the first code block
+    
+    return (
+      <>
+        <div>{message.content.split('```')[0]}</div>
+        <CodeBlock>
+          <CodeContent>{cleanCode}</CodeContent>
+          <InsertCodeButton onClick={() => insertCodeToNotebook(cleanCode)}>
+            Insert Code to Notebook
+          </InsertCodeButton>
+        </CodeBlock>
+        {message.content.split('```').length > 2 && (
+          <div>{message.content.split('```').slice(2).join('```')}</div>
+        )}
+      </>
+    );
+  };
+  
   return (
     <AssistantContainer>
       <AssistantHeader>
@@ -251,20 +309,7 @@ const AmazonQAssistant = () => {
       <ChatContainer ref={chatContainerRef}>
         {messages.map(message => (
           <Message key={message.id} isUser={message.isUser}>
-            {message.isLoading ? 'Thinking...' : message.content}
-            
-            {!message.isUser && !message.isLoading && extractCodeBlocks(message.content).length > 0 && (
-              <div style={{ marginTop: '10px' }}>
-                <InsertButton onClick={() => {
-                  const codeBlocks = extractCodeBlocks(message.content);
-                  if (codeBlocks.length > 0) {
-                    insertCodeToNotebook(codeBlocks[0]);
-                  }
-                }}>
-                  Insert Code to Notebook
-                </InsertButton>
-              </div>
-            )}
+            {renderMessage(message)}
           </Message>
         ))}
       </ChatContainer>
@@ -284,15 +329,6 @@ const AmazonQAssistant = () => {
           >
             {isLoading ? 'Sending...' : 'Send'}
           </SendButton>
-          
-          {getLastCodeBlock() && (
-            <InsertButton 
-              onClick={() => insertCodeToNotebook(getLastCodeBlock())}
-              disabled={isLoading}
-            >
-              Insert Latest Code
-            </InsertButton>
-          )}
         </ButtonGroup>
       </InputContainer>
     </AssistantContainer>
