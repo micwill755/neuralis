@@ -8,6 +8,7 @@ const AssistantContainer = styled.div`
   height: 100%;
   background-color: #f9f9fa;
   border-left: 1px solid #ddd;
+  overflow: hidden; /* Prevent overflow at container level */
 `;
 
 const AssistantHeader = styled.div`
@@ -18,6 +19,8 @@ const AssistantHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0; /* Prevent header from shrinking */
+  z-index: 10; /* Keep header on top */
 `;
 
 const ChatContainer = styled.div`

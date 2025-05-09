@@ -11,6 +11,7 @@ const AppContainer = styled.div`
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Prevent scrolling at the container level */
 `;
 
 const Header = styled.header`
@@ -19,6 +20,8 @@ const Header = styled.header`
   padding: 10px 20px;
   display: flex;
   align-items: center;
+  z-index: 100; /* Ensure header stays on top */
+  flex-shrink: 0; /* Prevent header from shrinking */
 `;
 
 const Logo = styled.div`
@@ -30,6 +33,7 @@ const ContentContainer = styled.div`
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative; /* For proper child positioning */
 `;
 
 const AmazonQButton = styled.button`
@@ -43,6 +47,22 @@ const AmazonQButton = styled.button`
   &:hover {
     background-color: #005a9e;
   }
+`;
+
+// Styled component for the main content area
+const MainContentArea = styled.div`
+  height: 100%;
+  overflow: auto; /* Enable scrolling for content */
+  display: flex;
+  flex-direction: column;
+`;
+
+// Styled component for the Amazon Q panel
+const AmazonQPanel = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #ddd;
 `;
 
 function App() {
@@ -147,7 +167,7 @@ function App() {
             defaultSize="70%"
             maxSize={-300} // Ensure Amazon Q panel has at least 300px
           >
-            <div style={{ height: '100%', overflow: 'auto' }}>
+            <MainContentArea>
               {selectedNotebook && <Notebook notebook={selectedNotebook} />}
               {selectedFile && <FileViewer file={selectedFile} />}
               {!selectedNotebook && !selectedFile && (
@@ -155,11 +175,11 @@ function App() {
                   Select a notebook or file from the sidebar to get started.
                 </div>
               )}
-            </div>
+            </MainContentArea>
             {showAmazonQ && (
-              <div style={{ height: '100%', borderLeft: '1px solid #ddd' }}>
+              <AmazonQPanel>
                 <AmazonQAssistant />
-              </div>
+              </AmazonQPanel>
             )}
           </SplitPane>
         </SplitPane>
