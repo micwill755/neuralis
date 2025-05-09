@@ -25,6 +25,12 @@ const CellType = styled.div`
   color: #757575;
 `;
 
+const ExecutionCount = styled.div`
+  font-size: 0.8rem;
+  color: #757575;
+  font-family: monospace;
+`;
+
 const CellContent = styled.div`
   padding: ${props => props.type === 'markdown' ? '10px' : '0'};
 `;
@@ -48,7 +54,19 @@ const MarkdownContent = styled.div`
   }
 `;
 
-const Cell = ({ id, type, content, isActive, onChange, onFocus }) => {
+const CellOutput = styled.div`
+  background-color: ${props => props.status === 'error' ? '#ffebee' : '#f5f5f5'};
+  border-top: 1px solid #e0e0e0;
+  padding: 10px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  color: ${props => props.status === 'error' ? '#d32f2f' : 'inherit'};
+`;
+
+const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
   const handleEditorChange = (value) => {
     onChange(id, value);
   };
@@ -57,6 +75,9 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus }) => {
     <CellContainer isActive={isActive} onClick={() => onFocus(id)}>
       <CellHeader isActive={isActive}>
         <CellType>{type}</CellType>
+        {type === 'code' && output?.executionCount && (
+          <ExecutionCount>[{output.executionCount}]</ExecutionCount>
+        )}
       </CellHeader>
       <CellContent type={type}>
         {type === 'code' ? (
@@ -95,6 +116,13 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus }) => {
           )
         )}
       </CellContent>
+      
+      {/* Display cell output if available */}
+      {type === 'code' && output && output.output && (
+        <CellOutput status={output.status}>
+          {output.output}
+        </CellOutput>
+      )}
     </CellContainer>
   );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import Cell from './Cell';
+import KernelSelector from './KernelSelector';
+import kernelService from '../../services/kernelService';
 
 const NotebookContainer = styled.div`
   padding: 20px;
@@ -46,11 +48,19 @@ const Button = styled.button`
   &:hover {
     background-color: #e9e9e9;
   }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 `;
 
 const Notebook = ({ notebook, onUpdateCells }) => {
   const [cells, setCells] = useState([]);
   const [activeCell, setActiveCell] = useState(null);
+  const [activeKernel, setActiveKernel] = useState(null);
+  const [cellOutputs, setCellOutputs] = useState({});
+  const [runningCell, setRunningCell] = useState(null);
   const previousNotebookRef = useRef(notebook);
   
   useEffect(() => {
@@ -120,10 +130,59 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     return newCell;
   };
   
-  const runCell = () => {
-    // In a real application, this would execute the code in the active cell
-    console.log('Running cell:', activeCell);
-    // For now, we'll just log the action
+  const handleKernelChange = (kernel) => {
+    setActiveKernel(kernel);
+    console.log('Kernel connected:', kernel);
+  };
+  
+  const runCell = async () => {
+    if (!activeCell || !activeKernel) {
+      console.log('Cannot run cell: No active cell or kernel');
+      return;
+    }
+    
+    const cellToRun = cells.find(cell => cell.id === activeCell);
+    if (!cellToRun || cellToRun.type !== 'code') {
+      console.log('Cannot run cell: Not a code cell');
+      return;
+    }
+    
+    try {
+      setRunningCell(activeCell);
+      
+      // Clear previous output for this cell
+      setCellOutputs(prev => ({
+        ...prev,
+        [activeCell]: { status: 'running', output: '' }
+      }));
+      
+      // Execute the code in the kernel
+      await kernelService.executeCode(cellToRun.content, (result) => {
+        if (result.type === 'execute_result' || result.type === 'stream') {
+          // Update the output for this cell
+          setCellOutputs(prev => ({
+            ...prev,
+            [activeCell]: {
+              status: 'success',
+              output: (prev[activeCell]?.output || '') + result.content,
+              executionCount: result.executionCount
+            }
+          }));
+        } else if (result.type === 'execution_complete') {
+          setRunningCell(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error running cell:', error);
+      setCellOutputs(prev => ({
+        ...prev,
+        [activeCell]: {
+          status: 'error',
+          output: error.message
+        }
+      }));
+      setRunningCell(null);
+    }
   };
   
   if (!notebook) {
@@ -134,23 +193,32 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     <NotebookContainer>
       <NotebookTitle>{notebook.name}</NotebookTitle>
       
+      {/* Add Kernel Selector */}
+      <KernelSelector onKernelChange={handleKernelChange} />
+      
       <ButtonGroup>
         <Button onClick={() => addCell('code')}>Add Code Cell</Button>
         <Button onClick={() => addCell('markdown')}>Add Markdown Cell</Button>
-        <Button onClick={runCell} disabled={!activeCell}>Run Cell</Button>
+        <Button 
+          onClick={runCell} 
+          disabled={!activeCell || !activeKernel || runningCell !== null}
+        >
+          {runningCell === activeCell ? 'Running...' : 'Run Cell'}
+        </Button>
       </ButtonGroup>
       
       {cells.map(cell => (
         <div id={`cell-${cell.id}`} key={cell.id}>
-        <Cell
-          id={cell.id}
-          type={cell.type}
-          content={cell.content}
-          isActive={activeCell === cell.id}
-          onChange={handleCellChange}
-          onFocus={handleCellFocus}
-        />
-      </div>
+          <Cell
+            id={cell.id}
+            type={cell.type}
+            content={cell.content}
+            isActive={activeCell === cell.id}
+            onChange={handleCellChange}
+            onFocus={handleCellFocus}
+            output={cellOutputs[cell.id]}
+          />
+        </div>
       ))}
       
       <AddCellButton onClick={() => addCell('code')}>+ Add Cell</AddCellButton>
