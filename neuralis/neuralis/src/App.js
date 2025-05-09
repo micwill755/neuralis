@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import Sidebar from './components/Layout/Sidebar';
 import Notebook from './components/Notebook/Notebook';
 import FileViewer from './components/FileViewer/FileViewer';
-import AmazonQPanel from './components/assistant/AmazonQPanel';
+import AmazonQAssistant from './components/assistant/AmazonQAssistant';
 import './App.css';
 
 const AppContainer = styled.div`
@@ -158,15 +158,7 @@ function App() {
             </div>
             {showAmazonQ && (
               <div style={{ height: '100%', borderLeft: '1px solid #ddd' }}>
-                <AmazonQPanel onInsertCode={(code) => {
-                  // Dispatch a custom event to insert code into the active notebook
-                  window.dispatchEvent(new CustomEvent('insertCodeToNotebook', { 
-                    detail: { 
-                      code,
-                      cellType: 'code' // Default to code cell type
-                    } 
-                  }));
-                }} />
+                <AmazonQAssistant />
               </div>
             )}
           </SplitPane>

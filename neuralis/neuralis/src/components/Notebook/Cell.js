@@ -75,9 +75,9 @@ const OutputImage = styled.img`
 const cleanAnsiCodes = (text) => {
   if (!text) return '';
   // Remove ANSI color codes and other terminal formatting
-  return text.replace(/\\033\[\d+(;\d+)*m|\[\d+(;\d+)*m/g, '')
+  return text.replace(/\u001b\[\d+(;\d+)*m|\[\d+(;\d+)*m/g, '')
              .replace(/\\u001b\[\d+(;\d+)*m/g, '')
-             .replace(/\u001b\[\d+(;\d+)*m/g, '');
+             .replace(/\\033\[\d+(;\d+)*m/g, '');
 };
 
 const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {

@@ -105,7 +105,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     return () => {
       window.removeEventListener('insertCodeToNotebook', handleInsertCode);
     };
-  }, []);
+  }, [addCell]);
   
   const handleCellChange = (id, newContent) => {
     const updatedCells = cells.map(cell => 
