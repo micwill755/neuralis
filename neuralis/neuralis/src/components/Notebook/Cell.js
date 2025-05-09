@@ -75,9 +75,15 @@ const OutputImage = styled.img`
 const cleanAnsiCodes = (text) => {
   if (!text) return '';
   // Remove ANSI color codes and other terminal formatting
-  return text.replace(/\u001b\[\d+(;\d+)*m|\[\d+(;\d+)*m/g, '')
-             .replace(/\\u001b\[\d+(;\d+)*m/g, '')
-             .replace(/\\033\[\d+(;\d+)*m/g, '');
+  try {
+    return text.replace(/\x1b\[\d+(;\d+)*m/g, '')  // Standard ANSI escape
+             .replace(/\[\d+(;\d+)*m/g, '')       // ANSI without escape char
+             .replace(/\\u001b\[\d+(;\d+)*m/g, '') // Escaped unicode
+             .replace(/\\033\[\d+(;\d+)*m/g, '');  // Octal escaped
+  } catch (e) {
+    console.error('Error cleaning ANSI codes:', e);
+    return text; // Return original text if regex fails
+  }
 };
 
 const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {

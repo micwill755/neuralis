@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import Cell from './Cell';
 import KernelSelector from './KernelSelector';
@@ -63,6 +63,19 @@ const Notebook = ({ notebook, onUpdateCells }) => {
   const [runningCell, setRunningCell] = useState(null);
   const previousNotebookRef = useRef(notebook);
   
+  // Define addCell with useCallback to prevent it from changing on every render
+  const addCell = useCallback((type, content = '') => {
+    const newCell = {
+      id: Date.now(), // Simple unique ID
+      type: type,
+      content: content || (type === 'markdown' ? '## New Markdown Cell' : '# New code cell')
+    };
+    
+    setCells(prevCells => [...prevCells, newCell]);
+    setActiveCell(newCell.id);
+    return newCell;
+  }, []);
+  
   useEffect(() => {
     if (notebook && notebook.cells && notebook !== previousNotebookRef.current) {
       setCells(notebook.cells);
@@ -116,18 +129,6 @@ const Notebook = ({ notebook, onUpdateCells }) => {
   
   const handleCellFocus = (id) => {
     setActiveCell(id);
-  };
-  
-  const addCell = (type, content = '') => {
-    const newCell = {
-      id: Date.now(), // Simple unique ID
-      type: type,
-      content: content || (type === 'markdown' ? '## New Markdown Cell' : '# New code cell')
-    };
-    
-    setCells([...cells, newCell]);
-    setActiveCell(newCell.id);
-    return newCell;
   };
   
   const handleKernelChange = (kernel) => {
