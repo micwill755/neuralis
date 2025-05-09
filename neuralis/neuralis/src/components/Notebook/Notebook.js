@@ -158,16 +158,26 @@ const Notebook = ({ notebook, onUpdateCells }) => {
       
       // Execute the code in the kernel
       await kernelService.executeCode(cellToRun.content, (result) => {
-        if (result.type === 'execute_result' || result.type === 'stream') {
+        if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
           // Update the output for this cell
           setCellOutputs(prev => ({
             ...prev,
             [activeCell]: {
               status: 'success',
               output: (prev[activeCell]?.output || '') + result.content,
+              imageData: result.imageData,
               executionCount: result.executionCount
             }
           }));
+        } else if (result.type === 'error') {
+          setCellOutputs(prev => ({
+            ...prev,
+            [activeCell]: {
+              status: 'error',
+              output: result.content
+            }
+          }));
+          setRunningCell(null);
         } else if (result.type === 'execution_complete') {
           setRunningCell(null);
         }

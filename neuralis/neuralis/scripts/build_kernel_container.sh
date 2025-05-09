@@ -39,10 +39,20 @@ TEMP_DOCKERFILE=$(mktemp)
 cat > $TEMP_DOCKERFILE << EOF
 FROM python:${PYTHON_VERSION}-slim
 
+# Install system dependencies for matplotlib
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Jupyter and common data science packages
 RUN pip install --no-cache-dir jupyter notebook jupyterlab \
     numpy pandas matplotlib scikit-learn scipy \
     ipykernel jupyter_client
+
+# Configure matplotlib to use Agg backend for headless environments
+RUN mkdir -p /root/.config/matplotlib && \
+    echo "backend: Agg" > /root/.config/matplotlib/matplotlibrc
 
 # Create a jupyter kernel
 RUN python -m ipykernel install --name python${PYTHON_VERSION} --display-name "Python ${PYTHON_VERSION}"
@@ -92,3 +102,25 @@ sleep 3
 # Get kernel information
 echo "Available kernels:"
 docker exec ${CONTAINER_NAME} jupyter kernelspec list
+
+# Create a test script to verify matplotlib is working
+echo "Testing matplotlib..."
+cat > /tmp/test_matplotlib.py << EOF
+import matplotlib
+print("Matplotlib backend:", matplotlib.get_backend())
+import matplotlib.pyplot as plt
+import numpy as np
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+plt.figure()
+plt.plot(x, y)
+plt.title('Test Plot')
+plt.savefig('/tmp/test_plot.png')
+print("Plot saved successfully!")
+EOF
+
+# Run the test script in the container
+docker cp /tmp/test_matplotlib.py ${CONTAINER_NAME}:/tmp/
+docker exec ${CONTAINER_NAME} python /tmp/test_matplotlib.py
+
+echo "Container setup complete!"

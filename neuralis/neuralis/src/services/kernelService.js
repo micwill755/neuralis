@@ -178,7 +178,7 @@ class KernelService {
     console.log('Received kernel message:', message.msg_type || 'unknown type');
     
     // Handle different message types from the kernel
-    if (message.msg_type === 'execute_result' || message.msg_type === 'stream') {
+    if (message.msg_type === 'execute_result' || message.msg_type === 'stream' || message.msg_type === 'display_data') {
       const parentMsgId = message.parent_header?.msg_id;
       if (!parentMsgId) {
         console.warn('Message has no parent_header.msg_id:', message);
@@ -189,32 +189,47 @@ class KernelService {
       
       if (callback) {
         let content = '';
+        let imageData = null;
+        
         if (message.msg_type === 'execute_result' && message.content?.data) {
-          content = message.content.data['text/plain'] || JSON.stringify(message.content.data);
+          if (message.content.data['text/plain']) {
+            content = message.content.data['text/plain'];
+          } else if (message.content.data['text/html']) {
+            content = message.content.data['text/html'];
+          }
+          
+          // Check for image data
+          if (message.content.data['image/png']) {
+            imageData = {
+              type: 'image/png',
+              data: message.content.data['image/png']
+            };
+          }
         } else if (message.msg_type === 'stream' && message.content?.text) {
           content = message.content.text;
+        } else if (message.msg_type === 'display_data' && message.content?.data) {
+          // Handle display_data messages (often used for plots)
+          if (message.content.data['text/plain']) {
+            content = message.content.data['text/plain'];
+          }
+          
+          // Check for image data
+          if (message.content.data['image/png']) {
+            imageData = {
+              type: 'image/png',
+              data: message.content.data['image/png']
+            };
+          }
         }
         
         callback({
           type: message.msg_type,
           content,
+          imageData,
           executionCount: message.content?.execution_count,
         });
       } else {
         console.warn('No callback found for message ID:', parentMsgId);
-      }
-    }
-    
-    // Handle execution completion
-    if (message.msg_type === 'status' && message.content?.execution_state === 'idle') {
-      const parentMsgId = message.parent_header?.msg_id;
-      if (!parentMsgId) return;
-      
-      const callback = this.executionCallbacks[parentMsgId];
-      
-      if (callback) {
-        callback({ type: 'execution_complete' });
-        delete this.executionCallbacks[parentMsgId];
       }
     }
     
@@ -234,6 +249,23 @@ class KernelService {
           type: 'error',
           content: errorMessage,
         });
+      }
+    }
+    
+    // Handle execution completion
+    if (message.msg_type === 'status' && message.content?.execution_state === 'idle') {
+      const parentMsgId = message.parent_header?.msg_id;
+      if (!parentMsgId) return;
+      
+      const callback = this.executionCallbacks[parentMsgId];
+      
+      if (callback) {
+        callback({ type: 'execution_complete' });
+        // Don't delete the callback yet as there might be more messages coming
+        // We'll delete it after a short timeout
+        setTimeout(() => {
+          delete this.executionCallbacks[parentMsgId];
+        }, 1000);
       }
     }
   }

@@ -66,6 +66,11 @@ const CellOutput = styled.div`
   color: ${props => props.status === 'error' ? '#d32f2f' : 'inherit'};
 `;
 
+const OutputImage = styled.img`
+  max-width: 100%;
+  margin: 10px 0;
+`;
+
 const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
   const handleEditorChange = (value) => {
     onChange(id, value);
@@ -118,9 +123,17 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
       </CellContent>
       
       {/* Display cell output if available */}
-      {type === 'code' && output && output.output && (
+      {type === 'code' && output && (
         <CellOutput status={output.status}>
           {output.output}
+          
+          {/* Display image if available */}
+          {output.imageData && (
+            <OutputImage 
+              src={`data:${output.imageData.type};base64,${output.imageData.data}`} 
+              alt="Output visualization" 
+            />
+          )}
         </CellOutput>
       )}
     </CellContainer>
