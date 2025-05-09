@@ -1,0 +1,108 @@
+/* Jupyter Lab Theme Colors */
+:root {
+  --jp-layout-color0: #111111;
+  --jp-layout-color1: #212121;
+  --jp-layout-color2: #424242;
+  --jp-layout-color3: #616161;
+  --jp-layout-color4: #757575;
+  
+  --jp-ui-font-color0: rgba(0, 0, 0, 1.0);
+  --jp-ui-font-color1: rgba(0, 0, 0, 0.87);
+  --jp-ui-font-color2: rgba(0, 0, 0, 0.54);
+  --jp-ui-font-color3: rgba(0, 0, 0, 0.38);
+  
+  --jp-border-color0: #e0e0e0;
+  --jp-border-color1: #bdbdbd;
+  --jp-border-color2: #9e9e9e;
+  
+  --jp-ui-inverse-font-color0: rgba(255, 255, 255, 1.0);
+  --jp-ui-inverse-font-color1: rgba(255, 255, 255, 0.87);
+  --jp-ui-inverse-font-color2: rgba(255, 255, 255, 0.54);
+  --jp-ui-inverse-font-color3: rgba(255, 255, 255, 0.38);
+  
+  --jp-brand-color0: #2196f3;
+  --jp-brand-color1: #1976d2;
+  --jp-brand-color2: #1565c0;
+  --jp-brand-color3: #0d47a1;
+  
+  --jp-accent-color0: #f37626;
+  --jp-accent-color1: #e76f51;
+  --jp-accent-color2: #ef6c00;
+  --jp-accent-color3: #e65100;
+  
+  --jp-warn-color0: #f44336;
+  --jp-warn-color1: #e53935;
+  --jp-warn-color2: #d32f2f;
+  --jp-warn-color3: #c62828;
+  
+  --jp-success-color0: #4caf50;
+  --jp-success-color1: #43a047;
+  --jp-success-color2: #388e3c;
+  --jp-success-color3: #2e7d32;
+  
+  --jp-info-color0: #2196f3;
+  --jp-info-color1: #1976d2;
+  --jp-info-color2: #1565c0;
+  --jp-info-color3: #0d47a1;
+  
+  /* File type colors */
+  --jp-notebook-color: #F37626;
+  --jp-python-color: #3776AB;
+  --jp-javascript-color: #F7DF1E;
+  --jp-json-color: #000000;
+  --jp-csv-color: #217346;
+  --jp-markdown-color: #083FA1;
+  --jp-text-color: #616161;
+  --jp-image-color: #FF6F61;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--jp-ui-font-color1);
+}
+
+code {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.jupyter-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+}
+
+/* Resizer styles */
+.Resizer {
+  background: var(--jp-border-color0);
+  z-index: 1;
+  box-sizing: border-box;
+  background-clip: padding-box;
+}
+
+.Resizer.vertical {
+  width: 5px;
+  margin: 0 -2px;
+  border-left: 2px solid rgba(255, 255, 255, 0);
+  border-right: 2px solid rgba(255, 255, 255, 0);
+  cursor: col-resize;
+}
+
+.Resizer.vertical:hover {
+  border-left: 2px solid var(--jp-border-color1);
+  border-right: 2px solid var(--jp-border-color1);
+}
+
+.Resizer.disabled {
+  cursor: not-allowed;
+}
+
+.Resizer.disabled:hover {
+  border-color: transparent;
+}

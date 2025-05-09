@@ -1,0 +1,6 @@
+jupyter
+notebook
+jupyterlab
+nbconvert
+mcp[cli]==1.6.0
+requests==2.32.3

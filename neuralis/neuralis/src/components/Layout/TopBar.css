@@ -1,0 +1,31 @@
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 28px;
+  background-color: #f8f8f8;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 8px;
+}
+
+.menu-items {
+  display: flex;
+}
+
+.menu-item {
+  padding: 0 8px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.menu-item:hover {
+  background-color: #e0e0e0;
+}
+
+.notebook-title {
+  font-size: 13px;
+  color: #757575;
+}
