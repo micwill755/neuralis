@@ -232,7 +232,7 @@ function Cell({ cell, isActive, onActivate, onChange, onExecute }) {
             } else if (output.data['text/html']) {
               return <OutputTable key={index} dangerouslySetInnerHTML={{ __html: output.data['text/html'] }} />;
             } else if (output.data['text/plain']) {
-              return <div key={index}>{output.data['text/plain']}</div>;
+              return <div key={index} style={{ whiteSpace: 'pre-wrap' }}>{output.data['text/plain']}</div>;
             }
           }
           return null;

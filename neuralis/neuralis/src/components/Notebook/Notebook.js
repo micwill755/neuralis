@@ -115,16 +115,21 @@ const Notebook = ({ notebook, onSave }) => {
       // Execute the code
       const result = await kernelService.executeCode(cell.content);
       
-      // Update cell with outputs
+      // Update cell with outputs and execution count
       setCells(prevCells => 
         prevCells.map(c => 
-          c.id === id ? { ...c, executing: false, outputs: result.outputs } : c
+          c.id === id ? { 
+            ...c, 
+            executing: false, 
+            outputs: result.outputs,
+            execution_count: result.execution_count 
+          } : c
         )
       );
       
-      // If this is the last cell, automatically add a new code cell
+      // If this is the last cell and it executed successfully, automatically add a new code cell
       const cellIndex = cells.findIndex(c => c.id === id);
-      if (cellIndex === cells.length - 1) {
+      if (cellIndex === cells.length - 1 && result.status === 'ok') {
         addCell('code');
       }
     } catch (error) {

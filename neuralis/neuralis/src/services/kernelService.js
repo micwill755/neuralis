@@ -315,106 +315,157 @@ const executeCode = async (code) => {
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Simple mock execution for demo purposes
-    let result;
+    // Parse the code to determine what it's trying to do
+    let outputs = [];
     
-    // Different execution behavior based on kernel type
-    if (activeKernel.type === 'conda') {
-      if (code.includes('import matplotlib') || code.includes('plt.')) {
-        result = {
+    // Handle print statements
+    const printRegex = /print\s*\((.*)\)/g;
+    let printMatch;
+    while ((printMatch = printRegex.exec(code)) !== null) {
+      let printContent = printMatch[1].trim();
+      
+      // Remove quotes if present
+      if ((printContent.startsWith('"') && printContent.endsWith('"')) || 
+          (printContent.startsWith("'") && printContent.endsWith("'"))) {
+        printContent = printContent.substring(1, printContent.length - 1);
+      }
+      
+      outputs.push({
+        output_type: 'stream',
+        name: 'stdout',
+        text: printContent
+      });
+    }
+    
+    // Handle variable assignments and expressions
+    if (code.includes('=') && !code.includes('==')) {
+      // Extract variable name
+      const varMatch = code.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
+      if (varMatch) {
+        const varName = varMatch[1];
+        
+        // Simulate variable value based on context
+        let varValue;
+        if (code.includes('range(')) {
+          varValue = 'range(0, 10)';
+        } else if (code.includes('[')) {
+          varValue = '[1, 2, 3, 4, 5]';
+        } else if (code.includes('{')) {
+          varValue = "{'key1': 'value1', 'key2': 'value2'}";
+        } else if (code.includes('True') || code.includes('False')) {
+          varValue = code.includes('True') ? 'True' : 'False';
+        } else if (code.includes('"') || code.includes("'")) {
+          varValue = '"some string value"';
+        } else {
+          // Default to a number
+          varValue = Math.floor(Math.random() * 100).toString();
+        }
+        
+        outputs.push({
+          output_type: 'execute_result',
+          data: {
+            'text/plain': `${varName} = ${varValue}`
+          },
+          execution_count: 1,
+          metadata: {}
+        });
+      }
+    }
+    
+    // Handle import statements
+    if (code.includes('import ')) {
+      // No visible output for successful imports
+    }
+    
+    // Handle matplotlib
+    if (code.includes('import matplotlib') || code.includes('plt.')) {
+      if (code.includes('plt.show()')) {
+        outputs.push({
           output_type: 'display_data',
           data: {
             'image/png': 'base64-encoded-image-data',
-            'text/plain': '[Conda Matplotlib figure]'
+            'text/plain': '[Matplotlib figure]'
           },
           metadata: {}
-        };
-      } else if (code.includes('import pandas') || code.includes('pd.')) {
-        result = {
-          output_type: 'execute_result',
-          data: {
-            'text/html': '<table><tr><th>Column1</th><th>Column2</th></tr><tr><td>1</td><td>2</td></tr></table>',
-            'text/plain': '   Column1  Column2\n0        1        2'
-          },
-          execution_count: 1,
-          metadata: {}
-        };
-      } else if (code.includes('print(')) {
-        const match = code.match(/print\(['"](.*)['"]\)/);
-        const text = match ? match[1] : 'Hello from Conda environment!';
-        result = {
-          output_type: 'stream',
-          name: 'stdout',
-          text: text
-        };
-      } else {
-        result = {
-          output_type: 'execute_result',
-          data: {
-            'text/plain': `Result from Conda environment: ${Math.random() * 100}`
-          },
-          execution_count: 1,
-          metadata: {}
-        };
+        });
       }
-    } else if (activeKernel.type === 'docker') {
-      if (code.includes('import tensorflow') || code.includes('tf.')) {
-        result = {
-          output_type: 'stream',
-          name: 'stdout',
-          text: 'TensorFlow initialized in Docker container'
-        };
-      } else if (code.includes('import torch') || code.includes('torch.')) {
-        result = {
-          output_type: 'stream',
-          name: 'stdout',
-          text: 'PyTorch initialized in Docker container'
-        };
-      } else if (code.includes('print(')) {
-        const match = code.match(/print\(['"](.*)['"]\)/);
-        const text = match ? match[1] : 'Hello from Docker container!';
-        result = {
-          output_type: 'stream',
-          name: 'stdout',
-          text: text
-        };
-      } else {
-        result = {
+    }
+    
+    // Handle pandas
+    if (code.includes('import pandas') || code.includes('pd.')) {
+      if (code.includes('DataFrame') || code.includes('read_csv')) {
+        outputs.push({
           output_type: 'execute_result',
           data: {
-            'text/plain': `Result from Docker container: ${Math.random() * 100}`
+            'text/html': '<table border="1" class="dataframe"><thead><tr><th></th><th>A</th><th>B</th><th>C</th></tr></thead><tbody><tr><th>0</th><td>1</td><td>4</td><td>7</td></tr><tr><th>1</th><td>2</td><td>5</td><td>8</td></tr><tr><th>2</th><td>3</td><td>6</td><td>9</td></tr></tbody></table>',
+            'text/plain': '   A  B  C\n0  1  4  7\n1  2  5  8\n2  3  6  9'
           },
           execution_count: 1,
           metadata: {}
-        };
+        });
       }
-    } else if (activeKernel.type === 'terminal') {
-      result = {
-        output_type: 'stream',
-        name: 'stdout',
-        text: `Terminal output from ${activeKernel.host}:${activeKernel.port}: ${code}`
-      };
-    } else {
-      result = {
-        output_type: 'execute_result',
-        data: {
-          'text/plain': `Result: ${Math.random() * 100}`
-        },
-        execution_count: 1,
-        metadata: {}
-      };
+    }
+    
+    // If no specific output was generated, provide a default
+    if (outputs.length === 0) {
+      // Check if the code is an expression that would return a value
+      const expressionRegex = /^[^=;]*$/;
+      if (expressionRegex.test(code.trim())) {
+        // It's likely an expression, return a value
+        outputs.push({
+          output_type: 'execute_result',
+          data: {
+            'text/plain': generateAppropriateOutput(code)
+          },
+          execution_count: 1,
+          metadata: {}
+        });
+      }
     }
     
     return {
       status: 'ok',
       execution_count: 1,
-      outputs: [result]
+      outputs: outputs.length > 0 ? outputs : []
     };
   } catch (error) {
     console.error('Error executing code:', error);
     throw error;
   }
 };
+
+/**
+ * Generate appropriate output based on code content
+ * @param {string} code - The code to analyze
+ * @returns {string} - Appropriate output
+ */
+function generateAppropriateOutput(code) {
+  code = code.trim();
+  
+  // Check for common Python expressions
+  if (code.match(/^\d+(\s*[\+\-\*\/]\s*\d+)+$/)) {
+    // It's a math expression
+    return Math.floor(Math.random() * 100).toString();
+  } else if (code.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+    // It's a variable name
+    if (['True', 'False', 'None'].includes(code)) {
+      return code;
+    }
+    return code;
+  } else if (code.includes('len(')) {
+    return Math.floor(Math.random() * 10).toString();
+  } else if (code.includes('.keys()')) {
+    return "dict_keys(['key1', 'key2', 'key3'])";
+  } else if (code.includes('.values()')) {
+    return "dict_values([1, 2, 3])";
+  } else if (code.includes('.items()')) {
+    return "dict_items([('key1', 1), ('key2', 2), ('key3', 3)])";
+  } else if (code.includes('[') && code.includes(']')) {
+    return code; // Return array expressions as-is
+  } else {
+    return code; // Default to returning the code itself
+  }
+}
 
 // Export all functions
 const kernelService = {
