@@ -65,9 +65,24 @@ const Notebook = ({ notebook, onSave }) => {
     }
   }, [notebook]);
   
+  // Listen for global kernel changes
+  useEffect(() => {
+    const handleGlobalKernelChange = (event) => {
+      const { kernel } = event.detail;
+      console.log('Global kernel changed:', kernel);
+      setActiveKernel(kernel);
+    };
+    
+    window.addEventListener('globalKernelChange', handleGlobalKernelChange);
+    
+    return () => {
+      window.removeEventListener('globalKernelChange', handleGlobalKernelChange);
+    };
+  }, []);
+  
   // Handle kernel change
   const handleKernelChange = (kernel) => {
-    console.log('Kernel changed:', kernel);
+    console.log('Kernel changed in notebook component:', kernel);
     setActiveKernel(kernel);
   };
   
@@ -210,8 +225,6 @@ const Notebook = ({ notebook, onSave }) => {
   return (
     <NotebookContainer>
       <NotebookTitle>{notebook?.name || 'Untitled Notebook'}</NotebookTitle>
-      
-      <KernelSelector onKernelChange={handleKernelChange} />
       
       {activeKernel && (
         <KernelInfo>

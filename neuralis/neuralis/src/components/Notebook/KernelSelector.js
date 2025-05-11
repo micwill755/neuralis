@@ -6,18 +6,20 @@ const SelectorContainer = styled.div`
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
+  padding: 10px;
 `;
 
 const SelectorHeader = styled.div`
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 `;
 
 const KernelLabel = styled.span`
   font-size: 0.9rem;
   color: #666;
+  font-weight: 500;
 `;
 
 const KernelSelect = styled.select`
@@ -26,6 +28,7 @@ const KernelSelect = styled.select`
   border-radius: 4px;
   background-color: white;
   font-size: 0.9rem;
+  width: 100%;
 `;
 
 const KernelStatus = styled.div`
@@ -102,8 +105,18 @@ const Select = styled.select`
 
 const ButtonGroup = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 15px;
+`;
+
+const SectionTitle = styled.h3`
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 5px;
 `;
 
 const TabContainer = styled.div`
@@ -143,7 +156,14 @@ const SuccessMessage = styled.div`
   border-radius: 4px;
 `;
 
-const KernelSelector = ({ onKernelChange }) => {
+const ActionButtonGroup = styled.div`
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  width: 100%;
+`;
+
+const KernelSelector = ({ onKernelChange, compactMode = false }) => {
   const [kernels, setKernels] = useState([]);
   const [selectedKernel, setSelectedKernel] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -543,10 +563,65 @@ const KernelSelector = ({ onKernelChange }) => {
     }
   };
 
-  return (
+  return compactMode ? (
+    <div>
+      <div style={{ marginBottom: '10px', fontWeight: '500', fontSize: '0.9rem' }}>
+        Kernel
+      </div>
+      
+      <KernelSelect 
+        value={selectedKernel || ''}
+        onChange={handleKernelChange}
+        disabled={isLoading || isConnected}
+        style={{ marginBottom: '8px' }}
+      >
+        <option value="">Select a kernel</option>
+        {kernels.map(kernel => (
+          <option key={kernel.id} value={kernel.name}>
+            {kernel.displayName || kernel.name}
+          </option>
+        ))}
+      </KernelSelect>
+      
+      <ActionButtonGroup>
+        {!isConnected ? (
+          <>
+            <KernelButton 
+              onClick={connectToKernel} 
+              disabled={isLoading || !selectedKernel}
+              style={{ flex: 1 }}
+            >
+              {isLoading ? 'Connecting...' : 'Connect'}
+            </KernelButton>
+            <KernelButton onClick={refreshKernels} disabled={isLoading}>
+              <span role="img" aria-label="refresh">🔄</span>
+            </KernelButton>
+          </>
+        ) : (
+          <>
+            <KernelStatus style={{ flex: 1 }}>
+              <StatusIndicator active={isConnected} />
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </KernelStatus>
+            <KernelButton 
+              onClick={restartKernel} 
+              disabled={isLoading || !isConnected}
+            >
+              Restart
+            </KernelButton>
+          </>
+        )}
+      </ActionButtonGroup>
+      
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {success && <SuccessMessage>{success}</SuccessMessage>}
+    </div>
+  ) : (
     <SelectorContainer>
+      <SectionTitle>Kernel Selector</SectionTitle>
+      
       <SelectorHeader>
-        <KernelLabel>Kernel:</KernelLabel>
+        <KernelLabel>Select a kernel:</KernelLabel>
         <KernelSelect 
           value={selectedKernel || ''}
           onChange={handleKernelChange}
@@ -560,33 +635,41 @@ const KernelSelector = ({ onKernelChange }) => {
           ))}
         </KernelSelect>
         
-        {!isConnected ? (
-          <>
-            <KernelButton 
-              onClick={connectToKernel} 
-              disabled={isLoading || !selectedKernel}
-            >
-              {isLoading ? 'Connecting...' : 'Connect'}
-            </KernelButton>
-            <KernelButton onClick={refreshKernels} disabled={isLoading}>
-              Refresh
-            </KernelButton>
-          </>
-        ) : (
-          <>
-            <KernelStatus>
-              <StatusIndicator active={isConnected} />
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </KernelStatus>
-            <KernelButton 
-              onClick={restartKernel} 
-              disabled={isLoading || !isConnected}
-            >
-              Restart
-            </KernelButton>
-          </>
-        )}
+        <ActionButtonGroup>
+          {!isConnected ? (
+            <>
+              <KernelButton 
+                onClick={connectToKernel} 
+                disabled={isLoading || !selectedKernel}
+                style={{ flex: 1 }}
+              >
+                {isLoading ? 'Connecting...' : 'Connect'}
+              </KernelButton>
+              <KernelButton onClick={refreshKernels} disabled={isLoading}>
+                Refresh
+              </KernelButton>
+            </>
+          ) : (
+            <>
+              <KernelStatus style={{ flex: 1 }}>
+                <StatusIndicator active={isConnected} />
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </KernelStatus>
+              <KernelButton 
+                onClick={restartKernel} 
+                disabled={isLoading || !isConnected}
+              >
+                Restart
+              </KernelButton>
+            </>
+          )}
+        </ActionButtonGroup>
       </SelectorHeader>
+      
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {success && <SuccessMessage>{success}</SuccessMessage>}
+      
+      <SectionTitle>Create New Environment</SectionTitle>
       
       <ButtonGroup>
         <KernelButton 
@@ -667,8 +750,39 @@ const KernelSelector = ({ onKernelChange }) => {
         </EnvironmentSelector>
       )}
       
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      {success && <SuccessMessage>{success}</SuccessMessage>}
+      <SectionTitle>Running Kernels</SectionTitle>
+      
+      {kernels.filter(k => k.status === 'active').length === 0 ? (
+        <div style={{ color: '#757575', fontSize: '0.9rem', marginTop: '10px' }}>
+          No running kernels
+        </div>
+      ) : (
+        <div style={{ marginTop: '10px' }}>
+          {kernels.filter(k => k.status === 'active').map(kernel => (
+            <div 
+              key={kernel.id} 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                padding: '5px 0',
+                borderBottom: '1px solid #e0e0e0'
+              }}
+            >
+              <StatusIndicator active={true} style={{ marginRight: '8px' }} />
+              <div style={{ flex: 1 }}>{kernel.displayName || kernel.name}</div>
+              <KernelButton 
+                onClick={() => restartKernel(kernel.name)}
+                style={{ marginRight: '5px' }}
+              >
+                Restart
+              </KernelButton>
+              <KernelButton>
+                Shut Down
+              </KernelButton>
+            </div>
+          ))}
+        </div>
+      )}
     </SelectorContainer>
   );
 };
