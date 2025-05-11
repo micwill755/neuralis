@@ -2,10 +2,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
-  background-color: #f5f5f5;
+  padding: 6px 12px;
+  background-color: #f8f8f8;
   border-bottom: 1px solid #e0e0e0;
   position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 .toolbar-section {
@@ -15,23 +16,25 @@
 
 .toolbar-button {
   background: none;
-  border: none;
-  padding: 6px 12px;
-  margin-right: 4px;
-  border-radius: 4px;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  margin-right: 2px;
+  border-radius: 2px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  color: #555;
-  font-size: 14px;
+  color: #444;
+  font-size: 13px;
 }
 
 .toolbar-button:hover {
-  background-color: #e0e0e0;
+  background-color: #eee;
+  border-color: #ddd;
 }
 
 .toolbar-button i {
-  margin-right: 5px;
+  margin-right: 4px;
+  font-size: 12px;
 }
 
 .kernel-section {
@@ -40,8 +43,8 @@
 }
 
 .kernel-status {
-  margin-right: 10px;
-  font-size: 14px;
+  margin-right: 8px;
+  font-size: 13px;
   display: flex;
   align-items: center;
 }
@@ -60,8 +63,8 @@
 
 .kernel-connected i,
 .kernel-disconnected i {
-  margin-right: 5px;
-  font-size: 10px;
+  margin-right: 4px;
+  font-size: 8px;
 }
 
 .kernel-actions {
@@ -78,7 +81,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  font-size: 10px;
+  font-size: 8px;
 }
 
 .kernel-dropdown {
@@ -92,11 +95,12 @@
   right: 0;
   top: 100%;
   background-color: white;
-  min-width: 200px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 1;
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
+  border: 1px solid #e0e0e0;
 }
 
 .kernel-dropdown:hover .kernel-dropdown-content {
@@ -105,10 +109,10 @@
 
 .kernel-dropdown-content h4 {
   margin: 0;
-  padding: 10px;
-  background-color: #f5f5f5;
+  padding: 8px;
+  background-color: #f8f8f8;
   border-bottom: 1px solid #e0e0e0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -117,11 +121,11 @@
   align-items: center;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .kernel-option:hover {
@@ -130,9 +134,9 @@
 
 .kernel-icon {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
@@ -151,22 +155,24 @@
   top: 100%;
   right: 0;
   background-color: white;
-  padding: 15px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   z-index: 1000;
+  border: 1px solid #e0e0e0;
+  font-size: 13px;
 }
 
 .kernel-connecting .spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  width: 20px;
-  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  border-left-color: #4a90e2;
+  border-left-color: #2196f3;
   animation: spin 1s linear infinite;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 @keyframes spin {
@@ -178,28 +184,31 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: #fff0f0;
-  padding: 15px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: #fff8f7;
+  padding: 12px;
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   z-index: 1000;
-  color: #d32f2f;
-  max-width: 300px;
+  color: #e53935;
+  max-width: 280px;
+  border: 1px solid #ffcdd2;
+  font-size: 13px;
 }
 
 .kernel-error i {
-  margin-right: 10px;
+  margin-right: 8px;
+  font-size: 12px;
 }
 
 .kernel-error button {
   background: none;
   border: none;
-  color: #d32f2f;
+  color: #2196f3;
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
-  margin-left: 10px;
+  margin-left: 8px;
   font-size: 12px;
 }

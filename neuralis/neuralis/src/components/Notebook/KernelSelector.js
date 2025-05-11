@@ -1,58 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import kernelService from '../../services/kernelService';
-
-const SelectorContainer = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-  gap: 10px;
-`;
-
-const KernelLabel = styled.span`
-  font-size: 0.9rem;
-  color: #666;
-`;
-
-const KernelSelect = styled.select`
-  padding: 5px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 0.9rem;
-`;
-
-const KernelStatus = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.9rem;
-`;
-
-const StatusIndicator = styled.div`
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: ${props => props.active ? '#4caf50' : '#9e9e9e'};
-`;
-
-const KernelButton = styled.button`
-  background-color: #f1f1f1;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 5px 10px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-  
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
+import './Notebook.css';
 
 const KernelSelector = ({ onKernelChange }) => {
   const [kernels, setKernels] = useState([]);
@@ -171,9 +119,10 @@ const KernelSelector = ({ onKernelChange }) => {
   };
 
   return (
-    <SelectorContainer>
-      <KernelLabel>Kernel:</KernelLabel>
-      <KernelSelect 
+    <div className="kernel-selector">
+      <span className="kernel-label">Kernel:</span>
+      <select 
+        className="kernel-select"
         value={selectedKernel || ''}
         onChange={handleKernelChange}
         disabled={isLoading || isConnected}
@@ -184,37 +133,43 @@ const KernelSelector = ({ onKernelChange }) => {
             {kernel.displayName}
           </option>
         ))}
-      </KernelSelect>
+      </select>
       
       {!isConnected ? (
         <>
-          <KernelButton 
+          <button 
+            className="notebook-button"
             onClick={connectToKernel} 
             disabled={isLoading || !selectedKernel}
           >
             {isLoading ? 'Connecting...' : 'Connect'}
-          </KernelButton>
-          <KernelButton onClick={refreshKernels} disabled={isLoading}>
+          </button>
+          <button 
+            className="notebook-button" 
+            onClick={refreshKernels} 
+            disabled={isLoading}
+          >
             Refresh
-          </KernelButton>
+          </button>
         </>
       ) : (
         <>
-          <KernelStatus>
-            <StatusIndicator active={isConnected} />
+          <div className="kernel-status">
+            <div className={`status-indicator ${isConnected ? 'active' : 'inactive'}`}></div>
             {isConnected ? 'Connected' : 'Disconnected'}
-          </KernelStatus>
-          <KernelButton 
+          </div>
+          <button 
+            className="notebook-button"
             onClick={restartKernel} 
             disabled={isLoading || !isConnected}
           >
             Restart
-          </KernelButton>
+          </button>
         </>
       )}
       
-      {error && <div style={{ color: 'red', marginLeft: '10px' }}>{error}</div>}
-    </SelectorContainer>
+      {error && <div style={{ color: '#e53935', fontSize: '0.85rem', marginLeft: '8px' }}>{error}</div>}
+    </div>
   );
 };
 

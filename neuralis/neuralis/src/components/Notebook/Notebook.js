@@ -1,59 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
 import Cell from './Cell';
 import KernelSelector from './KernelSelector';
 import kernelService from '../../services/kernelService';
-
-const NotebookContainer = styled.div`
-  padding: 20px;
-  background-color: white;
-  height: 100%;
-  overflow: auto;
-`;
-
-const NotebookTitle = styled.h1`
-  margin-top: 0;
-  margin-bottom: 20px;
-`;
-
-const AddCellButton = styled.button`
-  background-color: #f1f1f1;
-  border: 1px dashed #ccc;
-  border-radius: 4px;
-  padding: 8px 16px;
-  margin: 10px 0;
-  width: 100%;
-  text-align: center;
-  cursor: pointer;
-  color: #666;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const Button = styled.button`
-  background-color: #f1f1f1;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 6px 12px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-  
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
+import './Notebook.css';
 
 const Notebook = ({ notebook, onUpdateCells }) => {
   const [cells, setCells] = useState([]);
@@ -64,17 +13,32 @@ const Notebook = ({ notebook, onUpdateCells }) => {
   const previousNotebookRef = useRef(notebook);
   
   // Define addCell with useCallback to prevent it from changing on every render
-  const addCell = useCallback((type, content = '') => {
+  const addCell = useCallback((type, content = '', position = 'end') => {
     const newCell = {
       id: Date.now(), // Simple unique ID
       type: type,
       content: content || (type === 'markdown' ? '## New Markdown Cell' : '# New code cell')
     };
     
-    setCells(prevCells => [...prevCells, newCell]);
+    setCells(prevCells => {
+      if (position === 'end') {
+        return [...prevCells, newCell];
+      } else if (activeCell) {
+        // Find the index of the active cell
+        const activeIndex = prevCells.findIndex(cell => cell.id === activeCell);
+        if (activeIndex >= 0) {
+          // Insert after the active cell
+          const newCells = [...prevCells];
+          newCells.splice(activeIndex + 1, 0, newCell);
+          return newCells;
+        }
+      }
+      return [...prevCells, newCell];
+    });
+    
     setActiveCell(newCell.id);
     return newCell;
-  }, []);
+  }, [activeCell]);
   
   useEffect(() => {
     if (notebook && notebook.cells && notebook !== previousNotebookRef.current) {
@@ -102,7 +66,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
       
       if (code) {
         // Add a new cell with the generated code
-        const newCell = addCell(cellType, code);
+        const newCell = addCell(cellType, code, 'after');
         
         // Scroll to the new cell (if needed)
         setTimeout(() => {
@@ -201,44 +165,94 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     }
   };
   
+  const deleteCell = () => {
+    if (!activeCell) return;
+    
+    setCells(prevCells => prevCells.filter(cell => cell.id !== activeCell));
+    setActiveCell(null);
+  };
+  
+  const moveCellUp = () => {
+    if (!activeCell) return;
+    
+    setCells(prevCells => {
+      const index = prevCells.findIndex(cell => cell.id === activeCell);
+      if (index <= 0) return prevCells;
+      
+      const newCells = [...prevCells];
+      const temp = newCells[index];
+      newCells[index] = newCells[index - 1];
+      newCells[index - 1] = temp;
+      
+      return newCells;
+    });
+  };
+  
+  const moveCellDown = () => {
+    if (!activeCell) return;
+    
+    setCells(prevCells => {
+      const index = prevCells.findIndex(cell => cell.id === activeCell);
+      if (index < 0 || index >= prevCells.length - 1) return prevCells;
+      
+      const newCells = [...prevCells];
+      const temp = newCells[index];
+      newCells[index] = newCells[index + 1];
+      newCells[index + 1] = temp;
+      
+      return newCells;
+    });
+  };
+  
   if (!notebook) {
     return <div>No notebook selected</div>;
   }
   
   return (
-    <NotebookContainer>
-      <NotebookTitle>{notebook.name}</NotebookTitle>
+    <div className="notebook-container">
+      <div className="notebook-header">
+        <h1 className="notebook-title">{notebook.name}</h1>
+        <KernelSelector onKernelChange={handleKernelChange} />
+      </div>
       
-      {/* Add Kernel Selector */}
-      <KernelSelector onKernelChange={handleKernelChange} />
-      
-      <ButtonGroup>
-        <Button onClick={() => addCell('code')}>Add Code Cell</Button>
-        <Button onClick={() => addCell('markdown')}>Add Markdown Cell</Button>
-        <Button 
-          onClick={runCell} 
-          disabled={!activeCell || !activeKernel || runningCell !== null}
-        >
-          {runningCell === activeCell ? 'Running...' : 'Run Cell'}
-        </Button>
-      </ButtonGroup>
-      
-      {cells.map(cell => (
-        <div id={`cell-${cell.id}`} key={cell.id}>
-          <Cell
-            id={cell.id}
-            type={cell.type}
-            content={cell.content}
-            isActive={activeCell === cell.id}
-            onChange={handleCellChange}
-            onFocus={handleCellFocus}
-            output={cellOutputs[cell.id]}
-          />
+      <div className="notebook-content">
+        <div className="button-group">
+          <button 
+            className={`notebook-button run-button ${(!activeCell || !activeKernel || runningCell !== null) ? 'disabled' : ''}`}
+            onClick={runCell} 
+            disabled={!activeCell || !activeKernel || runningCell !== null}
+          >
+            {runningCell === activeCell ? '⏳' : '▶'} {runningCell === activeCell ? 'Running...' : 'Run'}
+          </button>
+          <button className="notebook-button" onClick={() => addCell('code', '', 'after')}>+ Code</button>
+          <button className="notebook-button" onClick={() => addCell('markdown', '', 'after')}>+ Markdown</button>
+          <button className="notebook-button" onClick={deleteCell} disabled={!activeCell}>Delete</button>
+          <button className="notebook-button" onClick={moveCellUp} disabled={!activeCell}>↑</button>
+          <button className="notebook-button" onClick={moveCellDown} disabled={!activeCell}>↓</button>
         </div>
-      ))}
-      
-      <AddCellButton onClick={() => addCell('code')}>+ Add Cell</AddCellButton>
-    </NotebookContainer>
+        
+        {cells.map((cell, index) => (
+          <div id={`cell-${cell.id}`} key={cell.id}>
+            <Cell
+              id={cell.id}
+              type={cell.type}
+              content={cell.content}
+              isActive={activeCell === cell.id}
+              onChange={handleCellChange}
+              onFocus={handleCellFocus}
+              output={cellOutputs[cell.id]}
+            />
+            {index === cells.length - 1 && (
+              <button className="add-cell-button" onClick={() => addCell('code')}>Add cell</button>
+            )}
+          </div>
+        ))}
+        
+        {cells.length === 0 && (
+          <button className="add-cell-button" onClick={() => addCell('code')}>Add cell</button>
+        )}
+      </div>
+    </div>
   );
 };
 
