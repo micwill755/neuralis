@@ -1,200 +1,184 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { FaFolder, FaFolderOpen, FaFileCsv, FaFileCode, FaMarkdown, FaFileAlt } from 'react-icons/fa';
 
 const SidebarContainer = styled.div`
-  background-color: #f8f9fa;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
-  border-right: 1px solid #dee2e6;
+  background-color: #f5f5f5;
+  border-right: 1px solid #e0e0e0;
 `;
 
-const SidebarHeader = styled.div`
-  padding: 15px;
-  font-weight: bold;
-  border-bottom: 1px solid #dee2e6;
+const SidebarTabs = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 36px;
+  background-color: #eeeeee;
+  border-right: 1px solid #e0e0e0;
 `;
 
-const FileList = styled.ul`
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-`;
-
-const FileItem = styled.li`
-  padding: 8px 15px;
+const SidebarTab = styled.div`
+  height: 36px;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  display: flex;
-  align-items: center;
+  color: ${props => props.active ? '#2196f3' : '#666'};
+  background-color: ${props => props.active ? '#f5f5f5' : 'transparent'};
+  border-left: ${props => props.active ? '2px solid #2196f3' : 'none'};
   &:hover {
-    background-color: #e9ecef;
+    background-color: ${props => props.active ? '#f5f5f5' : '#e0e0e0'};
   }
-  ${props => props.active && `
-    background-color: #e9ecef;
-    font-weight: bold;
-  `}
 `;
 
-const FileIcon = styled.span`
-  margin-right: 8px;
+const SidebarContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+`;
+
+const SectionTitle = styled.div`
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  margin: 8px 0 4px 0;
+  padding-left: 4px;
+`;
+
+const ItemList = styled.div`
+  margin-bottom: 16px;
+`;
+
+const Item = styled.div`
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 2px;
   display: flex;
   align-items: center;
-`;
-
-const FolderContents = styled.ul`
-  list-style-type: none;
-  padding-left: 20px;
-  margin: 0;
-`;
-
-const getFileIcon = (fileName) => {
-  const extension = fileName.split('.').pop().toLowerCase();
-  
-  switch (extension) {
-    case 'ipynb':
-      return <FaFileCode color="#F37626" />;
-    case 'csv':
-      return <FaFileCsv color="#217346" />;
-    case 'md':
-      return <FaMarkdown color="#083fa1" />;
-    case 'py':
-      return <FaFileCode color="#3572A5" />;
-    case 'js':
-    case 'jsx':
-      return <FaFileCode color="#f7df1e" />;
-    case 'json':
-      return <FaFileCode color="#5a5a5a" />;
-    default:
-      return <FaFileAlt />;
+  background-color: ${props => props.selected ? '#e3f2fd' : 'transparent'};
+  color: ${props => props.selected ? '#2196f3' : '#333'};
+  &:hover {
+    background-color: ${props => props.selected ? '#e3f2fd' : '#e0e0e0'};
   }
-};
+`;
 
-const Folder = ({ folder, onSelectNotebook, onSelectFile, selectedItem }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  return (
-    <>
-      <FileItem onClick={() => setIsOpen(!isOpen)}>
-        <FileIcon>
-          {isOpen ? <FaFolderOpen color="#FFC107" /> : <FaFolder color="#FFC107" />}
-        </FileIcon>
-        {folder.name}
-      </FileItem>
-      
-      {isOpen && (
-        <FolderContents>
-          {folder.contents.map((item, index) => (
-            item.type === 'folder' ? (
-              <Folder 
-                key={index} 
-                folder={item} 
-                onSelectNotebook={onSelectNotebook}
-                onSelectFile={onSelectFile}
-                selectedItem={selectedItem}
-              />
-            ) : (
-              <FileItem 
-                key={index} 
-                onClick={() => {
-                  if (item.name.endsWith('.ipynb')) {
-                    onSelectNotebook(item);
-                  } else {
-                    onSelectFile(item);
-                  }
-                }}
-                active={selectedItem && selectedItem.path === item.path}
-              >
-                <FileIcon>
-                  {getFileIcon(item.name)}
-                </FileIcon>
-                {item.name}
-              </FileItem>
-            )
-          ))}
-        </FolderContents>
-      )}
-    </>
-  );
-};
+const ItemIcon = styled.span`
+  margin-right: 6px;
+  font-size: 14px;
+`;
 
-const Sidebar = ({ onSelectNotebook, onSelectFile, selectedItem }) => {
-  const [fileStructure, setFileStructure] = useState([]);
+const SidebarLayout = styled.div`
+  display: flex;
+  height: 100%;
+`;
+
+function Sidebar({ onSelectNotebook, onSelectFile, selectedItem }) {
+  const [activeTab, setActiveTab] = useState('files');
   
-  useEffect(() => {
-    // Mock file structure - in a real app, this would come from an API
-    const mockFileStructure = [
-      {
-        type: 'folder',
-        name: 'notebooks',
-        contents: [
-          { type: 'file', name: 'notebook1.ipynb', path: '/notebooks/notebook1.ipynb' },
-          { type: 'file', name: 'notebook2.ipynb', path: '/notebooks/notebook2.ipynb' }
-        ]
-      },
-      {
-        type: 'folder',
-        name: 'data',
-        contents: [
-          { type: 'file', name: 'data.csv', path: '/data/data.csv' },
-          { type: 'file', name: 'config.json', path: '/data/config.json' }
-        ]
-      },
-      {
-        type: 'folder',
-        name: 'docs',
-        contents: [
-          { type: 'file', name: 'README.md', path: '/docs/README.md' }
-        ]
-      },
-      {
-        type: 'folder',
-        name: 'src',
-        contents: [
-          { type: 'file', name: 'main.py', path: '/src/main.py' },
-          { type: 'file', name: 'utils.js', path: '/src/utils.js' }
-        ]
-      }
-    ];
-    
-    setFileStructure(mockFileStructure);
-  }, []);
+  // Mock data
+  const notebooks = [
+    { name: 'notebook1.ipynb', path: '/notebooks/notebook1.ipynb' },
+    { name: 'notebook2.ipynb', path: '/notebooks/notebook2.ipynb' },
+    { name: 'analysis.ipynb', path: '/notebooks/analysis.ipynb' }
+  ];
+  
+  const files = [
+    { name: 'data.csv', path: '/data/data.csv' },
+    { name: 'config.json', path: '/config/config.json' },
+    { name: 'README.md', path: '/README.md' }
+  ];
+  
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'files':
+        return (
+          <>
+            <SectionTitle>Notebooks</SectionTitle>
+            <ItemList>
+              {notebooks.map((notebook, index) => (
+                <Item 
+                  key={index} 
+                  selected={selectedItem && selectedItem.path === notebook.path}
+                  onClick={() => onSelectNotebook(notebook)}
+                >
+                  <ItemIcon>📓</ItemIcon>
+                  {notebook.name}
+                </Item>
+              ))}
+            </ItemList>
+            
+            <SectionTitle>Files</SectionTitle>
+            <ItemList>
+              {files.map((file, index) => (
+                <Item 
+                  key={index} 
+                  selected={selectedItem && selectedItem.path === file.path}
+                  onClick={() => onSelectFile(file)}
+                >
+                  <ItemIcon>📄</ItemIcon>
+                  {file.name}
+                </Item>
+              ))}
+            </ItemList>
+          </>
+        );
+      case 'running':
+        return (
+          <>
+            <SectionTitle>Running Terminals and Kernels</SectionTitle>
+            <div style={{ padding: '8px', color: '#666', fontSize: '13px' }}>
+              No running terminals or kernels
+            </div>
+          </>
+        );
+      case 'commands':
+        return (
+          <>
+            <SectionTitle>Commands</SectionTitle>
+            <div style={{ padding: '8px', color: '#666', fontSize: '13px' }}>
+              Search for commands here
+            </div>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
   
   return (
     <SidebarContainer>
-      <SidebarHeader>Files</SidebarHeader>
-      <FileList>
-        {fileStructure.map((item, index) => (
-          item.type === 'folder' ? (
-            <Folder 
-              key={index} 
-              folder={item} 
-              onSelectNotebook={onSelectNotebook}
-              onSelectFile={onSelectFile}
-              selectedItem={selectedItem}
-            />
-          ) : (
-            <FileItem 
-              key={index} 
-              onClick={() => {
-                if (item.name.endsWith('.ipynb')) {
-                  onSelectNotebook(item);
-                } else {
-                  onSelectFile(item);
-                }
-              }}
-              active={selectedItem && selectedItem.path === item.path}
-            >
-              <FileIcon>
-                {getFileIcon(item.name)}
-              </FileIcon>
-              {item.name}
-            </FileItem>
-          )
-        ))}
-      </FileList>
+      <SidebarLayout>
+        <SidebarTabs>
+          <SidebarTab 
+            active={activeTab === 'files'} 
+            onClick={() => setActiveTab('files')}
+            title="File Browser"
+          >
+            📁
+          </SidebarTab>
+          <SidebarTab 
+            active={activeTab === 'running'} 
+            onClick={() => setActiveTab('running')}
+            title="Running Terminals and Kernels"
+          >
+            ⚙️
+          </SidebarTab>
+          <SidebarTab 
+            active={activeTab === 'commands'} 
+            onClick={() => setActiveTab('commands')}
+            title="Commands"
+          >
+            🔍
+          </SidebarTab>
+        </SidebarTabs>
+        <SidebarContent>
+          {renderTabContent()}
+        </SidebarContent>
+      </SidebarLayout>
     </SidebarContainer>
   );
-};
+}
 
 export default Sidebar;

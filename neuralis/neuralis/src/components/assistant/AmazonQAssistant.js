@@ -1,207 +1,215 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import amazonQService from '../../services/amazonQService';
 
 const AssistantContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #f9f9fa;
-  border-left: 1px solid #ddd;
-  overflow: hidden; /* Prevent overflow at container level */
-`;
-
-const AssistantHeader = styled.div`
-  padding: 10px 15px;
-  background-color: #232f3e;
-  color: white;
-  font-weight: bold;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0; /* Prevent header from shrinking */
-  z-index: 10; /* Keep header on top */
+  overflow: hidden;
 `;
 
 const ChatContainer = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const Message = styled.div`
-  margin-bottom: 15px;
-  max-width: 85%;
-  padding: 10px 15px;
-  border-radius: 8px;
-  ${props => props.isUser ? `
-    align-self: flex-end;
-    background-color: #0078d4;
-    color: white;
-  ` : `
-    align-self: flex-start;
-    background-color: white;
-    border: 1px solid #ddd;
-  `}
-  white-space: pre-wrap;
-`;
-
-const CodeBlock = styled.div`
-  background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  margin: 10px 0;
-  position: relative;
-`;
-
-const CodeContent = styled.pre`
   padding: 12px;
-  margin: 0;
-  overflow-x: auto;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.4;
-  background-color: #f5f5f5;
-  color: #28a745; /* Green text color for code */
-`;
-
-const InsertCodeButton = styled.button`
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  margin-top: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  
-  &:hover {
-    background-color: #218838;
-  }
+  background-color: #fafafa;
 `;
 
 const InputContainer = styled.div`
-  padding: 15px;
   border-top: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding: 12px;
+  background-color: white;
 `;
 
-const Input = styled.textarea`
+const MessageInput = styled.textarea`
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
   resize: none;
-  height: 80px;
   font-family: inherit;
   font-size: 14px;
-  
+  min-height: 60px;
   &:focus {
     outline: none;
     border-color: #2196f3;
   }
 `;
 
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: space-between;
-`;
-
 const SendButton = styled.button`
-  padding: 8px 16px;
-  background-color: #232f3e;
+  background-color: #2196f3;
   color: white;
   border: none;
   border-radius: 4px;
+  padding: 6px 12px;
+  margin-top: 8px;
   cursor: pointer;
-  
+  font-size: 14px;
   &:hover {
-    background-color: #1a2530;
+    background-color: #1976d2;
   }
-  
   &:disabled {
-    background-color: #cccccc;
+    background-color: #bdbdbd;
     cursor: not-allowed;
   }
 `;
 
-// Helper function to extract code blocks from a message
-const extractCodeBlocks = (message) => {
-  if (!message) return [];
-  
-  // Regex to find code blocks (text between triple backticks)
-  const codeBlockRegex = /```(?:python|javascript|java|html|css|bash|shell|sql|json|xml|yaml|typescript|jsx|tsx|markdown|md|text|plain|r|ruby|php|go|c|cpp|csharp|swift)?\n?([\s\S]*?)```/g;
-  const matches = [];
-  let match;
-  
-  while ((match = codeBlockRegex.exec(message)) !== null) {
-    matches.push(match[1].trim());
-  }
-  
-  // Also look for code blocks that might be indicated by Amazon Q CLI formatting
-  // This regex looks for blocks of text that appear to be code (indented or with special markers)
-  const cliCodeRegex = /m10m([\s\S]*?)mmm/g;
-  while ((match = cliCodeRegex.exec(message)) !== null) {
-    matches.push(match[1].trim());
-  }
-  
-  return matches;
-};
+const Message = styled.div`
+  margin-bottom: 16px;
+  max-width: 85%;
+  ${props => props.isUser ? 'margin-left: auto;' : ''}
+`;
 
-// Clean up Amazon Q CLI output by removing control characters and formatting
-const cleanQOutput = (text) => {
-  if (!text) return '';
-  
-  // Remove ANSI color codes and other terminal formatting
-  let cleaned = text
-    .replace(/\u001b\[\d+(;\d+)*m/g, '') // ANSI escape sequences
-    .replace(/\d+m/g, '')               // Color codes
-    .replace(/⠋|⠙|⠹|⠸|⠼|✓/g, '')        // Spinner characters
-    
-  // Try to extract clean code blocks
-  const codeBlocks = extractCodeBlocks(cleaned);
-  if (codeBlocks.length > 0) {
-    // If we found code blocks, return the first one as clean code
-    return codeBlocks[0];
-  }
-  
-  return cleaned;
-};
+const MessageBubble = styled.div`
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: ${props => props.isUser ? '#e3f2fd' : 'white'};
+  border: 1px solid ${props => props.isUser ? '#bbdefb' : '#e0e0e0'};
+  color: #333;
+`;
 
-const AmazonQAssistant = () => {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const chatContainerRef = useRef(null);
-  
-  useEffect(() => {
-    // Initialize Amazon Q service
-    amazonQService.initialize();
-    
-    // Add welcome message
-    setMessages([
-      {
-        id: Date.now(),
-        content: "Hello! I'm Amazon Q. How can I help you with your code today?",
-        isUser: false
-      }
-    ]);
-  }, []);
-  
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+const MessageTime = styled.div`
+  font-size: 11px;
+  color: #757575;
+  margin-top: 4px;
+  text-align: ${props => props.isUser ? 'right' : 'left'};
+`;
+
+const CodeBlock = styled.pre`
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  margin: 8px 0;
+`;
+
+const CodeActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+`;
+
+const CodeButton = styled.button`
+  background-color: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+  &:hover {
+    background-color: #f5f5f5;
+  }
+`;
+
+function AmazonQAssistant() {
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      text: "Hello! I'm Amazon Q. How can I help you with your code today?",
+      isUser: false,
+      timestamp: new Date(),
+      hasCode: false
     }
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef(null);
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  const handleInputChange = (e) => {
-    setInput(e.target.value);
+  const handleSendMessage = () => {
+    if (!inputText.trim()) return;
+    
+    // Add user message
+    const userMessage = {
+      id: Date.now(),
+      text: inputText,
+      isUser: true,
+      timestamp: new Date(),
+      hasCode: false
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
+    setIsLoading(true);
+    
+    // Simulate AI response
+    setTimeout(() => {
+      let responseText = '';
+      let hasCode = false;
+      let code = '';
+      
+      // Generate different responses based on input
+      if (inputText.toLowerCase().includes('hello') || inputText.toLowerCase().includes('hi')) {
+        responseText = "Hello! How can I help you with your code or data analysis today?";
+      } else if (inputText.toLowerCase().includes('plot') || inputText.toLowerCase().includes('graph') || inputText.toLowerCase().includes('chart')) {
+        responseText = "Here's a simple matplotlib code to create a line plot:";
+        hasCode = true;
+        code = `import matplotlib.pyplot as plt
+import numpy as np
+
+# Generate data
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+# Create plot
+plt.figure(figsize=(8, 4))
+plt.plot(x, y, 'b-', linewidth=2)
+plt.title('Sine Wave')
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.grid(True)
+plt.show()`;
+      } else if (inputText.toLowerCase().includes('pandas') || inputText.toLowerCase().includes('dataframe') || inputText.toLowerCase().includes('data')) {
+        responseText = "Here's how you can create and manipulate a pandas DataFrame:";
+        hasCode = true;
+        code = `import pandas as pd
+
+# Create a sample DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie', 'David'],
+    'Age': [25, 30, 35, 40],
+    'City': ['New York', 'San Francisco', 'Los Angeles', 'Chicago'],
+    'Salary': [70000, 80000, 90000, 100000]
+}
+
+df = pd.DataFrame(data)
+
+# Display the DataFrame
+print(df)
+
+# Basic operations
+print("\\nBasic statistics:")
+print(df.describe())
+
+# Filtering
+print("\\nPeople older than 30:")
+print(df[df['Age'] > 30])`;
+      } else {
+        responseText = "I'm here to help with your Python code and data analysis tasks. You can ask me about pandas, matplotlib, scikit-learn, or any other Python libraries. What would you like to know?";
+      }
+      
+      const aiMessage = {
+        id: Date.now(),
+        text: responseText,
+        isUser: false,
+        timestamp: new Date(),
+        hasCode,
+        code
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+      setIsLoading(false);
+    }, 1000);
   };
   
   const handleKeyDown = (e) => {
@@ -211,131 +219,77 @@ const AmazonQAssistant = () => {
     }
   };
   
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-    
-    const userMessage = {
-      id: Date.now(),
-      content: input.trim(),
-      isUser: true
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-    
-    // Create a placeholder for the assistant's response
-    const assistantMessageId = Date.now() + 1;
-    setMessages(prev => [...prev, {
-      id: assistantMessageId,
-      content: '',
-      isUser: false,
-      isLoading: true
-    }]);
-    
-    // Send prompt to Amazon Q CLI
-    await amazonQService.sendPrompt(input.trim(), (response) => {
-      if (response.type === 'partial' || response.type === 'complete') {
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: response.content, isLoading: false } 
-            : msg
-        ));
-      } else if (response.type === 'error') {
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: `Error: ${response.content}`, isLoading: false } 
-            : msg
-        ));
-      }
-      
-      if (response.type === 'complete') {
-        setIsLoading(false);
-      }
-    });
-  };
-  
   const insertCodeToNotebook = (code) => {
-    amazonQService.insertCodeToNotebook(code);
+    // Create a custom event to communicate with the notebook component
+    const event = new CustomEvent('insertCodeToNotebook', {
+      detail: { code, cellType: 'code' }
+    });
+    window.dispatchEvent(event);
   };
   
-  // Find the last code block from assistant messages
-  const getLastCodeBlock = () => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i];
-      if (!message.isUser) {
-        const codeBlocks = extractCodeBlocks(message.content);
-        if (codeBlocks.length > 0) {
-          return codeBlocks[0];
-        }
-      }
-    }
-    return null;
-  };
-  
-  // Render message with code blocks highlighted
-  const renderMessage = (message) => {
-    if (message.isLoading) return 'Thinking...';
-    if (message.isUser) return message.content;
-    
-    const codeBlocks = extractCodeBlocks(message.content);
-    
-    if (codeBlocks.length === 0) {
-      return message.content;
-    }
-    
-    // If there's code, display it in a code block with an insert button
-    const cleanCode = codeBlocks[0]; // Use the first code block
-    
-    return (
-      <>
-        <div>{message.content.split('```')[0]}</div>
-        <CodeBlock>
-          <CodeContent>{cleanCode}</CodeContent>
-          <InsertCodeButton onClick={() => insertCodeToNotebook(cleanCode)}>
-            Insert Code to Notebook
-          </InsertCodeButton>
-        </CodeBlock>
-        {message.content.split('```').length > 2 && (
-          <div>{message.content.split('```').slice(2).join('```')}</div>
-        )}
-      </>
-    );
+  const formatTimestamp = (timestamp) => {
+    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
   return (
     <AssistantContainer>
-      <AssistantHeader>
-        Amazon Q Assistant
-      </AssistantHeader>
-      
-      <ChatContainer ref={chatContainerRef}>
+      <ChatContainer>
         {messages.map(message => (
           <Message key={message.id} isUser={message.isUser}>
-            {renderMessage(message)}
+            <MessageBubble isUser={message.isUser}>
+              {message.text}
+              {message.hasCode && (
+                <>
+                  <CodeBlock>{message.code}</CodeBlock>
+                  <CodeActions>
+                    <CodeButton onClick={() => navigator.clipboard.writeText(message.code)}>
+                      Copy
+                    </CodeButton>
+                    <CodeButton onClick={() => insertCodeToNotebook(message.code)}>
+                      Insert to Notebook
+                    </CodeButton>
+                  </CodeActions>
+                </>
+              )}
+            </MessageBubble>
+            <MessageTime isUser={message.isUser}>
+              {formatTimestamp(message.timestamp)}
+            </MessageTime>
           </Message>
         ))}
+        {isLoading && (
+          <Message isUser={false}>
+            <MessageBubble isUser={false}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ marginRight: '8px' }}>Thinking</div>
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </MessageBubble>
+          </Message>
+        )}
+        <div ref={chatEndRef} />
       </ChatContainer>
-      
       <InputContainer>
-        <Input 
-          value={input}
-          onChange={handleInputChange}
+        <MessageInput
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Amazon Q for help... (Ctrl+Enter to send)"
+          placeholder="Ask Amazon Q for help with your code..."
           disabled={isLoading}
         />
-        <ButtonGroup>
-          <SendButton 
-            onClick={handleSendMessage}
-            disabled={isLoading || !input.trim()}
-          >
-            {isLoading ? 'Sending...' : 'Send'}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <small style={{ color: '#757575', fontSize: '11px' }}>Press Ctrl+Enter to send</small>
+          <SendButton onClick={handleSendMessage} disabled={!inputText.trim() || isLoading}>
+            Send
           </SendButton>
-        </ButtonGroup>
+        </div>
       </InputContainer>
     </AssistantContainer>
   );
-};
+}
 
 export default AmazonQAssistant;
