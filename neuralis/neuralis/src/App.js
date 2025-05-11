@@ -194,6 +194,34 @@ function App() {
       path: '/config/config.json',
       type: 'file',
       content: '{\n  "setting1": "value1",\n  "setting2": "value2"\n}'
+    },
+    {
+      id: 'file3',
+      name: 'README.md',
+      path: '/README.md',
+      type: 'file',
+      content: '# Neuralis\n\nA Jupyter Lab clone built with React.\n\n## Features\n\n- Notebook interface\n- File browser\n- Amazon Q integration\n- Multiple file types support'
+    },
+    {
+      id: 'file4',
+      name: 'script.py',
+      path: '/scripts/script.py',
+      type: 'file',
+      content: 'def hello_world():\n    print("Hello, world!")\n\nif __name__ == "__main__":\n    hello_world()'
+    },
+    {
+      id: 'file5',
+      name: 'styles.css',
+      path: '/styles/styles.css',
+      type: 'file',
+      content: 'body {\n    font-family: sans-serif;\n    margin: 0;\n    padding: 0;\n}\n\n.container {\n    max-width: 1200px;\n    margin: 0 auto;\n}'
+    },
+    {
+      id: 'file6',
+      name: 'app.js',
+      path: '/scripts/app.js',
+      type: 'file',
+      content: 'function init() {\n    console.log("Application initialized");\n}\n\nwindow.onload = init;'
     }
   ];
   
