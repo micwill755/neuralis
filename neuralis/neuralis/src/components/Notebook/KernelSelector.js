@@ -43,6 +43,20 @@ const KernelSelector = ({ onKernelChange }) => {
     
     initKernelService();
   }, []);
+  
+  // Add a listener for kernel updates
+  useEffect(() => {
+    const handleKernelUpdate = () => {
+      refreshKernels();
+    };
+    
+    // Listen for kernel updates
+    window.addEventListener('kernelUpdated', handleKernelUpdate);
+    
+    return () => {
+      window.removeEventListener('kernelUpdated', handleKernelUpdate);
+    };
+  }, []);
 
   // Connect to the selected kernel
   const connectToKernel = async () => {
@@ -110,8 +124,15 @@ const KernelSelector = ({ onKernelChange }) => {
     
     try {
       const availableKernels = await kernelService.listKernels();
+      console.log('Refreshed kernels:', availableKernels);
       setKernels(availableKernels);
+      
+      // If we don't have a selected kernel yet but have available kernels, select the first one
+      if (!selectedKernel && availableKernels.length > 0) {
+        setSelectedKernel(availableKernels[0].name);
+      }
     } catch (err) {
+      console.error('Error refreshing kernels:', err);
       setError(`Refresh error: ${err.message}`);
     } finally {
       setIsLoading(false);

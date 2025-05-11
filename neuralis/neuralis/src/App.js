@@ -356,7 +356,8 @@ function App() {
             }}
             onSetupComplete={(config) => {
               console.log('Kernel setup complete:', config);
-              // Here you would handle the kernel setup completion
+              // Trigger a refresh of the kernel list
+              window.dispatchEvent(new CustomEvent('kernelUpdated'));
               ReactDOM.unmountComponentAtNode(modalDiv);
               document.body.removeChild(modalDiv);
             }}
