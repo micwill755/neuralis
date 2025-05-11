@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CondaSetupForm from './CondaSetupForm';
 import DockerSetupForm from './DockerSetupForm';
 import './KernelSetupScreen.css';
 
-function KernelSetupScreen({ onClose, onSetupComplete }) {
-  const [setupType, setSetupType] = useState(null);
+function KernelSetupScreen({ onClose, onSetupComplete, initialType = null }) {
+  const [setupType, setSetupType] = useState(initialType);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Set initial type if provided
+  useEffect(() => {
+    if (initialType) {
+      setSetupType(initialType);
+    }
+  }, [initialType]);
   
   // Handle setup completion
   const handleSetupComplete = (config) => {

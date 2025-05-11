@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import SplitPane from 'react-split-pane';
 import styled from 'styled-components';
 import Sidebar from './components/Layout/Sidebar';
@@ -336,12 +337,33 @@ function App() {
     const handleKernelSetup = (event) => {
       const { type } = event.detail;
       
-      // Open the kernel setup modal with the selected type
-      console.log(`Opening kernel setup for: ${type}`);
-      
-      // Here you would open your kernel setup modal
-      // For now, we'll just show an alert
-      alert(`Setting up ${type} environment. This feature will be implemented soon.`);
+      // Import the KernelSetupScreen component dynamically
+      import('./components/kernel/KernelSetupScreen').then(module => {
+        const KernelSetupScreen = module.default;
+        
+        // Create a div for the modal
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'kernel-setup-modal';
+        document.body.appendChild(modalDiv);
+        
+        // Render the KernelSetupScreen in the modal
+        ReactDOM.render(
+          <KernelSetupScreen 
+            initialType={type}
+            onClose={() => {
+              ReactDOM.unmountComponentAtNode(modalDiv);
+              document.body.removeChild(modalDiv);
+            }}
+            onSetupComplete={(config) => {
+              console.log('Kernel setup complete:', config);
+              // Here you would handle the kernel setup completion
+              ReactDOM.unmountComponentAtNode(modalDiv);
+              document.body.removeChild(modalDiv);
+            }}
+          />,
+          modalDiv
+        );
+      });
     };
     
     window.addEventListener('openKernelSetup', handleKernelSetup);

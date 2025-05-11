@@ -8,11 +8,90 @@ class KernelService {
     this.activeKernel = null;
     this.availableKernels = [];
     this.executionCallbacks = {};
+    this.dockerContainers = [];
   }
 
   /**
-   * Initialize the kernel service and fetch available kernels
+   * Set up a Docker container for Python kernel
    */
+  async setupDockerContainer(config) {
+    try {
+      console.log('Setting up Docker container with config:', config);
+      
+      // Create a unique container name
+      const containerName = `neuralis-python-${config.pythonVersion}-${Date.now()}`;
+      
+      // Create a Dockerfile
+      const dockerfile = `
+FROM python:${config.pythonVersion}-slim
+
+WORKDIR /app
+
+# Install Jupyter and other packages
+RUN pip install --no-cache-dir jupyter ${config.packages.split(',').join(' ')}
+
+# Expose the Jupyter port
+EXPOSE ${config.port}
+
+# Create a non-root user to run Jupyter
+RUN useradd -m jupyter
+USER jupyter
+
+# Set up Jupyter notebook configuration
+RUN mkdir -p /home/jupyter/.jupyter
+RUN echo "c.NotebookApp.token = ''" > /home/jupyter/.jupyter/jupyter_notebook_config.py
+RUN echo "c.NotebookApp.password = ''" >> /home/jupyter/.jupyter/jupyter_notebook_config.py
+RUN echo "c.NotebookApp.allow_origin = '*'" >> /home/jupyter/.jupyter/jupyter_notebook_config.py
+RUN echo "c.NotebookApp.ip = '0.0.0.0'" >> /home/jupyter/.jupyter/jupyter_notebook_config.py
+
+# Set the working directory to the mounted volume
+WORKDIR /notebooks
+
+# Start Jupyter notebook
+CMD ["jupyter", "notebook", "--no-browser"]
+`;
+
+      // For demonstration purposes, we'll simulate the Docker container creation
+      console.log('Creating Docker container:', containerName);
+      console.log('Dockerfile:', dockerfile);
+      
+      // Simulate Docker build and run process
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Add the container to our list
+      const containerInfo = {
+        id: `container_${Date.now()}`,
+        name: containerName,
+        pythonVersion: config.pythonVersion,
+        port: config.port,
+        mountPath: config.mountPath,
+        status: 'running',
+        createdAt: new Date().toISOString()
+      };
+      
+      this.dockerContainers.push(containerInfo);
+      
+      // Add a kernel for this container
+      const kernelInfo = {
+        id: `kernel_${Date.now()}`,
+        name: `python${config.pythonVersion.replace('.', '')}`,
+        displayName: `Python ${config.pythonVersion} (Docker: ${containerName})`,
+        language: 'python',
+        isRunning: true,
+        containerId: containerInfo.id
+      };
+      
+      this.availableKernels.push(kernelInfo);
+      
+      console.log('Docker container setup complete:', containerInfo);
+      console.log('Kernel added:', kernelInfo);
+      
+      return containerInfo;
+    } catch (error) {
+      console.error('Error setting up Docker container:', error);
+      throw new Error(`Failed to set up Docker container: ${error.message}`);
+    }
+  }
   async initialize() {
     try {
       console.log('Initializing kernel service...');

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { setupDockerContainer } from '../../services/kernelService';
+import kernelService from '../../services/kernelService';
 
 function DockerSetupForm({ onComplete, onBack, setIsLoading, setError }) {
   const [formData, setFormData] = useState({
@@ -24,7 +24,7 @@ function DockerSetupForm({ onComplete, onBack, setIsLoading, setError }) {
     
     try {
       // Generate Docker files and start container
-      await setupDockerContainer(formData);
+      const containerInfo = await kernelService.setupDockerContainer(formData);
       
       // Create kernel configuration
       const config = {
@@ -34,7 +34,8 @@ function DockerSetupForm({ onComplete, onBack, setIsLoading, setError }) {
         port: formData.port,
         mountPath: formData.mountPath,
         packages: formData.packages.split(',').map(pkg => pkg.trim()),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        containerInfo
       };
       
       onComplete(config);
