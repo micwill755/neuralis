@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  python-kernel:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./api_endpoints.ipynb:/app/api_endpoints.ipynb
+    restart: unless-stopped
