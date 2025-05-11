@@ -4,9 +4,15 @@ import kernelService from '../../services/kernelService';
 
 const SelectorContainer = styled.div`
   display: flex;
-  align-items: center;
+  flex-direction: column;
   margin-bottom: 15px;
+`;
+
+const SelectorHeader = styled.div`
+  display: flex;
+  align-items: center;
   gap: 10px;
+  margin-bottom: 10px;
 `;
 
 const KernelLabel = styled.span`
@@ -54,12 +60,117 @@ const KernelButton = styled.button`
   }
 `;
 
+const EnvironmentSelector = styled.div`
+  margin-top: 10px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+`;
+
+const EnvironmentTitle = styled.h3`
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1rem;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 12px;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+`;
+
+const TabContainer = styled.div`
+  display: flex;
+  margin-bottom: 15px;
+`;
+
+const Tab = styled.div`
+  padding: 8px 15px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-bottom: ${props => props.active ? 'none' : '1px solid #ccc'};
+  border-radius: 4px 4px 0 0;
+  background-color: ${props => props.active ? 'white' : '#f1f1f1'};
+  font-weight: ${props => props.active ? 'bold' : 'normal'};
+  
+  &:hover {
+    background-color: ${props => props.active ? 'white' : '#e9e9e9'};
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #d32f2f;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 8px;
+  background-color: #ffebee;
+  border-radius: 4px;
+`;
+
+const SuccessMessage = styled.div`
+  color: #2e7d32;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 8px;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+`;
+
 const KernelSelector = ({ onKernelChange }) => {
   const [kernels, setKernels] = useState([]);
   const [selectedKernel, setSelectedKernel] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  
+  // Environment creation state
+  const [showEnvironmentSelector, setShowEnvironmentSelector] = useState(false);
+  const [environmentType, setEnvironmentType] = useState('conda'); // conda, docker, terminal
+  const [environmentForm, setEnvironmentForm] = useState({
+    // Conda fields
+    condaName: 'my-conda-env',
+    pythonVersion: '3.9',
+    condaPackages: 'numpy,pandas,matplotlib',
+    
+    // Docker fields
+    dockerName: 'my-jupyter-container',
+    dockerImage: 'jupyter/scipy-notebook',
+    dockerPort: '8888:8888',
+    
+    // Terminal fields
+    terminalHost: 'localhost',
+    terminalPort: '8888',
+    terminalUsername: '',
+    terminalPassword: ''
+  });
 
   // Initialize and fetch available kernels
   useEffect(() => {
@@ -95,6 +206,24 @@ const KernelSelector = ({ onKernelChange }) => {
     
     initKernelService();
   }, []);
+  
+  // Listen for showKernelSelector events
+  useEffect(() => {
+    const handleShowKernelSelector = (event) => {
+      const { environmentType } = event.detail;
+      
+      // Show the environment selector with the specified type
+      setShowEnvironmentSelector(true);
+      setEnvironmentType(environmentType);
+      setError(null);
+      setSuccess(null);
+    };
+    
+    window.addEventListener('showKernelSelector', handleShowKernelSelector);
+    return () => {
+      window.removeEventListener('showKernelSelector', handleShowKernelSelector);
+    };
+  }, []);
 
   // Connect to the selected kernel
   const connectToKernel = async () => {
@@ -110,6 +239,8 @@ const KernelSelector = ({ onKernelChange }) => {
       if (kernel) {
         console.log('Connected to kernel:', kernel);
         setIsConnected(true);
+        setSuccess(`Successfully connected to ${kernel.displayName || kernel.name}`);
+        
         if (onKernelChange) {
           onKernelChange(kernel);
         }
@@ -134,6 +265,8 @@ const KernelSelector = ({ onKernelChange }) => {
       
       if (success) {
         console.log('Kernel restarted successfully');
+        setSuccess('Kernel restarted successfully');
+        
         // Notify that kernel was restarted
         if (onKernelChange) {
           onKernelChange(kernelService.getActiveKernel());
@@ -153,6 +286,8 @@ const KernelSelector = ({ onKernelChange }) => {
   const handleKernelChange = (e) => {
     setSelectedKernel(e.target.value);
     setIsConnected(false);
+    setError(null);
+    setSuccess(null);
   };
 
   // Manual refresh of kernels
@@ -163,6 +298,7 @@ const KernelSelector = ({ onKernelChange }) => {
     try {
       const availableKernels = await kernelService.listKernels();
       setKernels(availableKernels);
+      setSuccess('Kernel list refreshed');
     } catch (err) {
       setError(`Refresh error: ${err.message}`);
     } finally {
@@ -170,50 +306,353 @@ const KernelSelector = ({ onKernelChange }) => {
     }
   };
 
+  // Handle form input changes
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setEnvironmentForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Create a new environment
+  const createEnvironment = async () => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      let result;
+      
+      if (environmentType === 'conda') {
+        // Create conda environment
+        const packages = environmentForm.condaPackages.split(',').map(pkg => pkg.trim());
+        result = await kernelService.createCondaEnvironment(
+          environmentForm.condaName,
+          environmentForm.pythonVersion,
+          packages
+        );
+        
+      } else if (environmentType === 'docker') {
+        // Create Docker container
+        const options = {};
+        if (environmentForm.dockerPort) {
+          const [hostPort, containerPort] = environmentForm.dockerPort.split(':');
+          options.ports = { [hostPort]: containerPort };
+        }
+        
+        result = await kernelService.createDockerContainer(
+          environmentForm.dockerName,
+          environmentForm.dockerImage,
+          options
+        );
+        
+      } else if (environmentType === 'terminal') {
+        // Connect to terminal kernel
+        const credentials = {
+          username: environmentForm.terminalUsername,
+          password: environmentForm.terminalPassword
+        };
+        
+        result = await kernelService.connectToTerminalKernel(
+          environmentForm.terminalHost,
+          parseInt(environmentForm.terminalPort),
+          credentials
+        );
+      }
+      
+      if (result) {
+        console.log('Environment created:', result);
+        setSuccess(`Successfully created ${result.displayName || result.name}`);
+        
+        // Add the new kernel to the list and select it
+        setKernels(prev => [...prev, result]);
+        setSelectedKernel(result.name);
+        
+        // Close the environment selector
+        setShowEnvironmentSelector(false);
+        
+        // Refresh kernels
+        refreshKernels();
+      }
+    } catch (err) {
+      console.error('Failed to create environment:', err);
+      setError(`Environment creation error: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Render the appropriate environment form based on the selected type
+  const renderEnvironmentForm = () => {
+    switch (environmentType) {
+      case 'conda':
+        return (
+          <>
+            <FormGroup>
+              <Label htmlFor="condaName">Environment Name</Label>
+              <Input
+                type="text"
+                id="condaName"
+                name="condaName"
+                value={environmentForm.condaName}
+                onChange={handleFormChange}
+                placeholder="my-conda-env"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="pythonVersion">Python Version</Label>
+              <Select
+                id="pythonVersion"
+                name="pythonVersion"
+                value={environmentForm.pythonVersion}
+                onChange={handleFormChange}
+              >
+                <option value="3.7">Python 3.7</option>
+                <option value="3.8">Python 3.8</option>
+                <option value="3.9">Python 3.9</option>
+                <option value="3.10">Python 3.10</option>
+                <option value="3.11">Python 3.11</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="condaPackages">Packages (comma-separated)</Label>
+              <Input
+                type="text"
+                id="condaPackages"
+                name="condaPackages"
+                value={environmentForm.condaPackages}
+                onChange={handleFormChange}
+                placeholder="numpy,pandas,matplotlib"
+              />
+            </FormGroup>
+          </>
+        );
+        
+      case 'docker':
+        return (
+          <>
+            <FormGroup>
+              <Label htmlFor="dockerName">Container Name</Label>
+              <Input
+                type="text"
+                id="dockerName"
+                name="dockerName"
+                value={environmentForm.dockerName}
+                onChange={handleFormChange}
+                placeholder="my-jupyter-container"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="dockerImage">Docker Image</Label>
+              <Select
+                id="dockerImage"
+                name="dockerImage"
+                value={environmentForm.dockerImage}
+                onChange={handleFormChange}
+              >
+                <option value="jupyter/scipy-notebook">Jupyter SciPy Notebook</option>
+                <option value="jupyter/tensorflow-notebook">Jupyter TensorFlow Notebook</option>
+                <option value="jupyter/datascience-notebook">Jupyter Data Science Notebook</option>
+                <option value="jupyter/r-notebook">Jupyter R Notebook</option>
+                <option value="jupyter/pyspark-notebook">Jupyter PySpark Notebook</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="dockerPort">Port Mapping (host:container)</Label>
+              <Input
+                type="text"
+                id="dockerPort"
+                name="dockerPort"
+                value={environmentForm.dockerPort}
+                onChange={handleFormChange}
+                placeholder="8888:8888"
+              />
+            </FormGroup>
+          </>
+        );
+        
+      case 'terminal':
+        return (
+          <>
+            <FormGroup>
+              <Label htmlFor="terminalHost">Host</Label>
+              <Input
+                type="text"
+                id="terminalHost"
+                name="terminalHost"
+                value={environmentForm.terminalHost}
+                onChange={handleFormChange}
+                placeholder="localhost"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="terminalPort">Port</Label>
+              <Input
+                type="text"
+                id="terminalPort"
+                name="terminalPort"
+                value={environmentForm.terminalPort}
+                onChange={handleFormChange}
+                placeholder="8888"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="terminalUsername">Username (optional)</Label>
+              <Input
+                type="text"
+                id="terminalUsername"
+                name="terminalUsername"
+                value={environmentForm.terminalUsername}
+                onChange={handleFormChange}
+                placeholder="username"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="terminalPassword">Password (optional)</Label>
+              <Input
+                type="password"
+                id="terminalPassword"
+                name="terminalPassword"
+                value={environmentForm.terminalPassword}
+                onChange={handleFormChange}
+                placeholder="password"
+              />
+            </FormGroup>
+          </>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
   return (
     <SelectorContainer>
-      <KernelLabel>Kernel:</KernelLabel>
-      <KernelSelect 
-        value={selectedKernel || ''}
-        onChange={handleKernelChange}
-        disabled={isLoading || isConnected}
-      >
-        <option value="">Select a kernel</option>
-        {kernels.map(kernel => (
-          <option key={kernel.id} value={kernel.name}>
-            {kernel.displayName}
-          </option>
-        ))}
-      </KernelSelect>
+      <SelectorHeader>
+        <KernelLabel>Kernel:</KernelLabel>
+        <KernelSelect 
+          value={selectedKernel || ''}
+          onChange={handleKernelChange}
+          disabled={isLoading || isConnected}
+        >
+          <option value="">Select a kernel</option>
+          {kernels.map(kernel => (
+            <option key={kernel.id} value={kernel.name}>
+              {kernel.displayName || kernel.name}
+            </option>
+          ))}
+        </KernelSelect>
+        
+        {!isConnected ? (
+          <>
+            <KernelButton 
+              onClick={connectToKernel} 
+              disabled={isLoading || !selectedKernel}
+            >
+              {isLoading ? 'Connecting...' : 'Connect'}
+            </KernelButton>
+            <KernelButton onClick={refreshKernels} disabled={isLoading}>
+              Refresh
+            </KernelButton>
+          </>
+        ) : (
+          <>
+            <KernelStatus>
+              <StatusIndicator active={isConnected} />
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </KernelStatus>
+            <KernelButton 
+              onClick={restartKernel} 
+              disabled={isLoading || !isConnected}
+            >
+              Restart
+            </KernelButton>
+          </>
+        )}
+      </SelectorHeader>
       
-      {!isConnected ? (
-        <>
-          <KernelButton 
-            onClick={connectToKernel} 
-            disabled={isLoading || !selectedKernel}
-          >
-            {isLoading ? 'Connecting...' : 'Connect'}
-          </KernelButton>
-          <KernelButton onClick={refreshKernels} disabled={isLoading}>
-            Refresh
-          </KernelButton>
-        </>
-      ) : (
-        <>
-          <KernelStatus>
-            <StatusIndicator active={isConnected} />
-            {isConnected ? 'Connected' : 'Disconnected'}
-          </KernelStatus>
-          <KernelButton 
-            onClick={restartKernel} 
-            disabled={isLoading || !isConnected}
-          >
-            Restart
-          </KernelButton>
-        </>
+      <ButtonGroup>
+        <KernelButton 
+          onClick={() => {
+            setShowEnvironmentSelector(true);
+            setEnvironmentType('conda');
+            setError(null);
+            setSuccess(null);
+          }}
+        >
+          New Conda Environment
+        </KernelButton>
+        <KernelButton 
+          onClick={() => {
+            setShowEnvironmentSelector(true);
+            setEnvironmentType('docker');
+            setError(null);
+            setSuccess(null);
+          }}
+        >
+          New Docker Container
+        </KernelButton>
+        <KernelButton 
+          onClick={() => {
+            setShowEnvironmentSelector(true);
+            setEnvironmentType('terminal');
+            setError(null);
+            setSuccess(null);
+          }}
+        >
+          Connect to Terminal
+        </KernelButton>
+      </ButtonGroup>
+      
+      {showEnvironmentSelector && (
+        <EnvironmentSelector>
+          <TabContainer>
+            <Tab 
+              active={environmentType === 'conda'} 
+              onClick={() => setEnvironmentType('conda')}
+            >
+              Conda
+            </Tab>
+            <Tab 
+              active={environmentType === 'docker'} 
+              onClick={() => setEnvironmentType('docker')}
+            >
+              Docker
+            </Tab>
+            <Tab 
+              active={environmentType === 'terminal'} 
+              onClick={() => setEnvironmentType('terminal')}
+            >
+              Terminal
+            </Tab>
+          </TabContainer>
+          
+          <EnvironmentTitle>
+            {environmentType === 'conda' && 'Create Conda Environment'}
+            {environmentType === 'docker' && 'Create Docker Container'}
+            {environmentType === 'terminal' && 'Connect to Terminal'}
+          </EnvironmentTitle>
+          
+          {renderEnvironmentForm()}
+          
+          <ButtonGroup>
+            <KernelButton onClick={() => setShowEnvironmentSelector(false)}>
+              Cancel
+            </KernelButton>
+            <KernelButton 
+              onClick={createEnvironment}
+              disabled={isLoading}
+              style={{ backgroundColor: '#2196f3', color: 'white' }}
+            >
+              {isLoading ? 'Creating...' : 'Create'}
+            </KernelButton>
+          </ButtonGroup>
+        </EnvironmentSelector>
       )}
       
-      {error && <div style={{ color: 'red', marginLeft: '10px' }}>{error}</div>}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {success && <SuccessMessage>{success}</SuccessMessage>}
     </SelectorContainer>
   );
 };

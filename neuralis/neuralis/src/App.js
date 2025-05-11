@@ -339,9 +339,11 @@ function App() {
       // Open the kernel setup modal with the selected type
       console.log(`Opening kernel setup for: ${type}`);
       
-      // Here you would open your kernel setup modal
-      // For now, we'll just show an alert
-      alert(`Setting up ${type} environment. This feature will be implemented soon.`);
+      // Dispatch an event to show the kernel selector with the selected type
+      const kernelSelectorEvent = new CustomEvent('showKernelSelector', {
+        detail: { environmentType: type }
+      });
+      window.dispatchEvent(kernelSelectorEvent);
     };
     
     window.addEventListener('openKernelSetup', handleKernelSetup);

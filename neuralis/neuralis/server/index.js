@@ -1,10 +1,11 @@
 /**
- * Express server for handling Amazon Q CLI interactions
+ * Express server for handling Amazon Q CLI interactions and kernel management
  */
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { sendMessageToAmazonQ } = require('./amazonQService');
+const kernelRoutes = require('./routes/kernelRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +30,9 @@ app.post('/api/amazon-q', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Kernel routes
+app.use('/api/kernels', kernelRoutes);
 
 // Start the server
 app.listen(PORT, () => {

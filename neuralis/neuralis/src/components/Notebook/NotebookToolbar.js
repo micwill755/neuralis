@@ -1,159 +1,170 @@
-import React, { useState, useEffect } from 'react';
-import KernelSetupScreen from '../kernel/KernelSetupScreen';
-import { connectToKernel, listAvailableKernels } from '../../services/kernelService';
-import { getKernelConfig } from '../../services/storageService';
-import './NotebookToolbar.css';
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import KernelSelector from '../kernel/KernelSelector';
 
-function NotebookToolbar({ onKernelConnect, activeKernel }) {
-  const [showKernelSetup, setShowKernelSetup] = useState(false);
-  const [availableKernels, setAvailableKernels] = useState([]);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState(null);
+const ToolbarContainer = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const ToolbarGroup = styled.div`
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+`;
+
+const ToolbarButton = styled.button`
+  background-color: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin-right: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   
-  // Load available kernels
-  useEffect(() => {
-    const loadKernels = async () => {
-      const kernels = await listAvailableKernels();
-      setAvailableKernels(kernels);
-    };
-    
-    loadKernels();
-  }, []);
+  &:hover {
+    background-color: #e0e0e0;
+  }
   
-  // Handle kernel setup completion
-  const handleSetupComplete = async (config) => {
-    try {
-      setIsConnecting(true);
-      setConnectionError(null);
-      
-      // Connect to the newly created kernel
-      const connectionInfo = await connectToKernel(config);
-      
-      // Update available kernels
-      const kernels = await listAvailableKernels();
-      setAvailableKernels(kernels);
-      
-      // Notify parent component
-      onKernelConnect(connectionInfo);
-    } catch (error) {
-      setConnectionError(error.message);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
   
-  // Handle kernel selection
-  const handleKernelSelect = async (kernel) => {
-    try {
-      setIsConnecting(true);
-      setConnectionError(null);
-      
-      // Connect to the selected kernel
-      const connectionInfo = await connectToKernel(kernel);
-      
-      // Notify parent component
-      onKernelConnect(connectionInfo);
-    } catch (error) {
-      setConnectionError(error.message);
-    } finally {
-      setIsConnecting(false);
+  svg, img {
+    margin-right: 6px;
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const KernelButton = styled(ToolbarButton)`
+  background-color: ${props => props.active ? '#e3f2fd' : 'transparent'};
+  border-color: ${props => props.active ? '#2196f3' : '#e0e0e0'};
+  
+  &:hover {
+    background-color: ${props => props.active ? '#bbdefb' : '#e0e0e0'};
+  }
+`;
+
+const KernelStatus = styled.div`
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #757575;
+  
+  .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background-color: ${props => props.active ? '#4caf50' : '#bdbdbd'};
+  }
+`;
+
+const KernelIcon = styled.div`
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+`;
+
+const Modal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  border-radius: 4px;
+  width: 600px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+`;
+
+function NotebookToolbar({ onRunCell, onAddCell, onSaveNotebook, activeKernel, onKernelSelect }) {
+  const [showKernelSelector, setShowKernelSelector] = useState(false);
+  
+  const handleKernelSelect = (kernel) => {
+    setShowKernelSelector(false);
+    if (onKernelSelect) {
+      onKernelSelect(kernel);
     }
   };
   
   return (
-    <div className="notebook-toolbar">
-      <div className="toolbar-section">
-        <button className="toolbar-button">
-          <i className="fa fa-save"></i> Save
-        </button>
-        <button className="toolbar-button">
-          <i className="fa fa-plus"></i> New Cell
-        </button>
-        <button className="toolbar-button">
-          <i className="fa fa-play"></i> Run
-        </button>
-      </div>
+    <ToolbarContainer>
+      <ToolbarGroup>
+        <ToolbarButton onClick={onRunCell} title="Run Cell">
+          <i className="fas fa-play"></i> Run
+        </ToolbarButton>
+        <ToolbarButton onClick={onAddCell} title="Add Cell">
+          <i className="fas fa-plus"></i> Add Cell
+        </ToolbarButton>
+        <ToolbarButton onClick={onSaveNotebook} title="Save Notebook">
+          <i className="fas fa-save"></i> Save
+        </ToolbarButton>
+      </ToolbarGroup>
       
-      <div className="toolbar-section kernel-section">
-        <div className="kernel-status">
+      <ToolbarGroup>
+        <KernelButton 
+          onClick={() => setShowKernelSelector(true)}
+          title="Select Kernel"
+          active={showKernelSelector}
+        >
           {activeKernel ? (
-            <span className="kernel-connected">
-              <i className="fa fa-circle"></i> 
-              {activeKernel.kernelType === 'conda' 
-                ? `Conda: ${activeKernel.environmentName}` 
-                : `Docker: ${activeKernel.containerName || 'Python'}`}
-            </span>
+            <>
+              <KernelIcon>
+                {activeKernel.type === 'conda' && <img src="/icons/conda.png" alt="Conda" />}
+                {activeKernel.type === 'docker' && <img src="/icons/docker.png" alt="Docker" />}
+                {activeKernel.type === 'terminal' && <img src="/icons/terminal.png" alt="Terminal" />}
+              </KernelIcon>
+              {activeKernel.displayName || activeKernel.name}
+            </>
           ) : (
-            <span className="kernel-disconnected">
-              <i className="fa fa-circle-o"></i> No Kernel
-            </span>
+            <>
+              <i className="fas fa-microchip"></i> Select Kernel
+            </>
           )}
-        </div>
-        
-        <div className="kernel-actions">
-          <button 
-            className="toolbar-button kernel-connect-button"
-            onClick={() => setShowKernelSetup(true)}
-          >
-            <i className="fa fa-plug"></i>
-            <span className="setup-icon">⚙️</span>
-          </button>
-          
-          {availableKernels.length > 0 && (
-            <div className="kernel-dropdown">
-              <button className="toolbar-button">
-                <i className="fa fa-chevron-down"></i>
-              </button>
-              
-              <div className="kernel-dropdown-content">
-                <h4>Available Kernels</h4>
-                {availableKernels.map((kernel, index) => (
-                  <button 
-                    key={index}
-                    className="kernel-option"
-                    onClick={() => handleKernelSelect(kernel)}
-                  >
-                    {kernel.type === 'conda' ? (
-                      <span>
-                        <i className="kernel-icon conda-icon"></i>
-                        {kernel.display_name || `Python (${kernel.environmentName})`}
-                      </span>
-                    ) : (
-                      <span>
-                        <i className="kernel-icon docker-icon"></i>
-                        {kernel.display_name || `Python (${kernel.containerName})`}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        </KernelButton>
+      </ToolbarGroup>
       
-      {showKernelSetup && (
-        <KernelSetupScreen 
-          onClose={() => setShowKernelSetup(false)}
-          onSetupComplete={handleSetupComplete}
-        />
+      {activeKernel && (
+        <KernelStatus active={activeKernel.status === 'active'}>
+          <div className="status-indicator"></div>
+          {activeKernel.status === 'active' ? 'Running' : 'Idle'}
+        </KernelStatus>
       )}
       
-      {isConnecting && (
-        <div className="kernel-connecting">
-          <div className="spinner"></div>
-          <span>Connecting to kernel...</span>
-        </div>
+      {showKernelSelector && (
+        <Modal onClick={() => setShowKernelSelector(false)}>
+          <ModalContent onClick={e => e.stopPropagation()}>
+            <KernelSelector onKernelSelect={handleKernelSelect} />
+          </ModalContent>
+        </Modal>
       )}
-      
-      {connectionError && (
-        <div className="kernel-error">
-          <i className="fa fa-exclamation-triangle"></i>
-          <span>{connectionError}</span>
-          <button onClick={() => setConnectionError(null)}>Dismiss</button>
-        </div>
-      )}
-    </div>
+    </ToolbarContainer>
   );
 }
 

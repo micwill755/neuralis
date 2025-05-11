@@ -18,226 +18,217 @@ const NotebookTitle = styled.h1`
 
 const AddCellButton = styled.button`
   background-color: #f1f1f1;
-  border: 1px dashed #ccc;
-  border-radius: 4px;
-  padding: 8px 16px;
-  margin: 10px 0;
-  width: 100%;
-  text-align: center;
-  cursor: pointer;
-  color: #666;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const Button = styled.button`
-  background-color: #f1f1f1;
   border: 1px solid #ccc;
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 5px 10px;
+  margin-top: 10px;
   cursor: pointer;
   
   &:hover {
     background-color: #e9e9e9;
   }
+`;
+
+const KernelInfo = styled.div`
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  font-size: 0.9rem;
+`;
+
+const KernelIcon = styled.div`
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
   
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
+  img {
+    max-width: 100%;
+    max-height: 100%;
   }
 `;
 
-const Notebook = ({ notebook, onUpdateCells }) => {
+const Notebook = ({ notebook, onSave }) => {
   const [cells, setCells] = useState([]);
   const [activeCell, setActiveCell] = useState(null);
   const [activeKernel, setActiveKernel] = useState(null);
-  const [cellOutputs, setCellOutputs] = useState({});
-  const [runningCell, setRunningCell] = useState(null);
   const previousNotebookRef = useRef(notebook);
   
-  // Define addCell with useCallback to prevent it from changing on every render
-  const addCell = useCallback((type, content = '') => {
-    const newCell = {
-      id: Date.now(), // Simple unique ID
-      type: type,
-      content: content || (type === 'markdown' ? '## New Markdown Cell' : '# New code cell')
-    };
-    
-    setCells(prevCells => [...prevCells, newCell]);
-    setActiveCell(newCell.id);
-    return newCell;
-  }, []);
-  
+  // Initialize cells from notebook
   useEffect(() => {
     if (notebook && notebook.cells && notebook !== previousNotebookRef.current) {
       setCells(notebook.cells);
       previousNotebookRef.current = notebook;
+      setActiveCell(null);
     }
   }, [notebook]);
   
-  // Reset active cell when switching notebooks
-  useEffect(() => {
-    setActiveCell(null);
-  }, [notebook]);
+  // Handle kernel change
+  const handleKernelChange = (kernel) => {
+    console.log('Kernel changed:', kernel);
+    setActiveKernel(kernel);
+  };
   
-  // Update parent component when cells change
-  useEffect(() => {
-    if (onUpdateCells && cells.length > 0) {
-      onUpdateCells(cells);
+  // Add a new cell
+  const addCell = (type = 'code') => {
+    const newCell = {
+      id: Date.now().toString(),
+      type,
+      content: '',
+      outputs: []
+    };
+    
+    setCells(prevCells => [...prevCells, newCell]);
+  };
+  
+  // Update cell content
+  const updateCellContent = (id, content) => {
+    setCells(prevCells => 
+      prevCells.map(cell => 
+        cell.id === id ? { ...cell, content } : cell
+      )
+    );
+  };
+  
+  // Execute a cell
+  const executeCell = async (id) => {
+    if (!activeKernel) {
+      alert('Please connect to a kernel first');
+      return;
     }
-  }, [cells, onUpdateCells]);
+    
+    const cell = cells.find(c => c.id === id);
+    if (!cell || cell.type !== 'code') return;
+    
+    try {
+      // Update cell to show it's executing
+      setCells(prevCells => 
+        prevCells.map(c => 
+          c.id === id ? { ...c, executing: true, outputs: [] } : c
+        )
+      );
+      
+      // Execute the code
+      const result = await kernelService.executeCode(cell.content);
+      
+      // Update cell with outputs
+      setCells(prevCells => 
+        prevCells.map(c => 
+          c.id === id ? { ...c, executing: false, outputs: result.outputs } : c
+        )
+      );
+    } catch (error) {
+      console.error('Error executing cell:', error);
+      
+      // Update cell with error
+      setCells(prevCells => 
+        prevCells.map(c => 
+          c.id === id ? { 
+            ...c, 
+            executing: false, 
+            outputs: [{ 
+              output_type: 'error',
+              ename: 'Error',
+              evalue: error.message,
+              traceback: [error.stack]
+            }] 
+          } : c
+        )
+      );
+    }
+  };
   
-  // Listen for code insertion events from Amazon Q
+  // Save the notebook
+  const saveNotebook = () => {
+    if (onSave) {
+      onSave({
+        ...notebook,
+        cells,
+        lastSaved: new Date().toISOString(),
+        kernel: activeKernel ? {
+          name: activeKernel.name,
+          type: activeKernel.type
+        } : null
+      });
+    }
+  };
+  
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback((e) => {
+    // Ctrl+S to save
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      saveNotebook();
+    }
+  }, [saveNotebook]);
+  
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+  
+  // Listen for insertCodeToNotebook event from Amazon Q
   useEffect(() => {
     const handleInsertCode = (event) => {
-      const { code, cellType = 'code' } = event.detail;
+      const { code, cellType } = event.detail;
       
-      if (code) {
-        // Add a new cell with the generated code
-        const newCell = addCell(cellType, code);
-        
-        // Scroll to the new cell (if needed)
-        setTimeout(() => {
-          const cellElement = document.getElementById(`cell-${newCell.id}`);
-          if (cellElement) {
-            cellElement.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 100);
-      }
+      // Create a new cell with the code
+      const newCell = {
+        id: Date.now().toString(),
+        type: cellType || 'code',
+        content: code,
+        outputs: []
+      };
+      
+      setCells(prevCells => [...prevCells, newCell]);
     };
     
     window.addEventListener('insertCodeToNotebook', handleInsertCode);
+    
     return () => {
       window.removeEventListener('insertCodeToNotebook', handleInsertCode);
     };
-  }, [addCell]);
-  
-  const handleCellChange = (id, newContent) => {
-    const updatedCells = cells.map(cell => 
-      cell.id === id ? { ...cell, content: newContent } : cell
-    );
-    setCells(updatedCells);
-  };
-  
-  const handleCellFocus = (id) => {
-    setActiveCell(id);
-  };
-  
-  const handleKernelChange = (kernel) => {
-    setActiveKernel(kernel);
-    console.log('Kernel connected:', kernel);
-  };
-  
-  const runCell = async () => {
-    if (!activeCell || !activeKernel) {
-      console.log('Cannot run cell: No active cell or kernel');
-      return;
-    }
-    
-    const cellToRun = cells.find(cell => cell.id === activeCell);
-    if (!cellToRun || cellToRun.type !== 'code') {
-      console.log('Cannot run cell: Not a code cell');
-      return;
-    }
-    
-    try {
-      setRunningCell(activeCell);
-      
-      // Clear previous output for this cell
-      setCellOutputs(prev => ({
-        ...prev,
-        [activeCell]: { status: 'running', output: '' }
-      }));
-      
-      // Execute the code in the kernel
-      await kernelService.executeCode(cellToRun.content, (result) => {
-        if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
-          // Update the output for this cell
-          setCellOutputs(prev => {
-            const currentOutput = prev[activeCell]?.output || '';
-            const currentImageData = prev[activeCell]?.imageData;
-            
-            return {
-              ...prev,
-              [activeCell]: {
-                status: 'success',
-                output: result.content ? currentOutput + result.content : currentOutput,
-                imageData: result.imageData || currentImageData,
-                executionCount: result.executionCount || prev[activeCell]?.executionCount
-              }
-            };
-          });
-        } else if (result.type === 'error') {
-          setCellOutputs(prev => ({
-            ...prev,
-            [activeCell]: {
-              status: 'error',
-              output: result.content
-            }
-          }));
-          setRunningCell(null);
-        } else if (result.type === 'execution_complete') {
-          setRunningCell(null);
-        }
-      });
-    } catch (error) {
-      console.error('Error running cell:', error);
-      setCellOutputs(prev => ({
-        ...prev,
-        [activeCell]: {
-          status: 'error',
-          output: error.message
-        }
-      }));
-      setRunningCell(null);
-    }
-  };
-  
-  if (!notebook) {
-    return <div>No notebook selected</div>;
-  }
-  
+  }, []);
+
   return (
     <NotebookContainer>
-      <NotebookTitle>{notebook.name}</NotebookTitle>
+      <NotebookTitle>{notebook?.name || 'Untitled Notebook'}</NotebookTitle>
       
-      {/* Add Kernel Selector */}
       <KernelSelector onKernelChange={handleKernelChange} />
       
-      <ButtonGroup>
-        <Button onClick={() => addCell('code')}>Add Code Cell</Button>
-        <Button onClick={() => addCell('markdown')}>Add Markdown Cell</Button>
-        <Button 
-          onClick={runCell} 
-          disabled={!activeCell || !activeKernel || runningCell !== null}
-        >
-          {runningCell === activeCell ? 'Running...' : 'Run Cell'}
-        </Button>
-      </ButtonGroup>
+      {activeKernel && (
+        <KernelInfo>
+          <KernelIcon>
+            {activeKernel.type === 'conda' && <img src="/icons/conda.png" alt="Conda" />}
+            {activeKernel.type === 'docker' && <img src="/icons/docker.png" alt="Docker" />}
+            {activeKernel.type === 'terminal' && <img src="/icons/terminal.png" alt="Terminal" />}
+          </KernelIcon>
+          <div>
+            <strong>Active Kernel:</strong> {activeKernel.displayName || activeKernel.name}
+          </div>
+        </KernelInfo>
+      )}
       
-      {cells.map(cell => (
-        <div id={`cell-${cell.id}`} key={cell.id}>
-          <Cell
-            id={cell.id}
-            type={cell.type}
-            content={cell.content}
-            isActive={activeCell === cell.id}
-            onChange={handleCellChange}
-            onFocus={handleCellFocus}
-            output={cellOutputs[cell.id]}
-          />
-        </div>
+      {cells.map((cell, index) => (
+        <Cell
+          key={cell.id}
+          cell={cell}
+          isActive={activeCell === cell.id}
+          onActivate={() => setActiveCell(cell.id)}
+          onChange={(content) => updateCellContent(cell.id, content)}
+          onExecute={() => executeCell(cell.id)}
+        />
       ))}
       
-      <AddCellButton onClick={() => addCell('code')}>+ Add Cell</AddCellButton>
+      <div>
+        <AddCellButton onClick={() => addCell('code')}>+ Add Code Cell</AddCellButton>
+        <AddCellButton onClick={() => addCell('markdown')} style={{ marginLeft: '10px' }}>+ Add Markdown Cell</AddCellButton>
+        <AddCellButton onClick={saveNotebook} style={{ marginLeft: '10px' }}>Save Notebook</AddCellButton>
+      </div>
     </NotebookContainer>
   );
 };
