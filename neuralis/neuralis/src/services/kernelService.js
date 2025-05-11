@@ -310,7 +310,7 @@ const executeCode = async (code) => {
     console.log(`Executing code in kernel ${activeKernel.name}:`, code);
     
     // In a real implementation, this would execute the code via a backend API
-    // For now, we'll simulate code execution
+    // For now, we'll simulate code execution based on the kernel type
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -318,20 +318,81 @@ const executeCode = async (code) => {
     // Simple mock execution for demo purposes
     let result;
     
-    if (code.includes('print(') || code.includes('console.log(')) {
+    // Different execution behavior based on kernel type
+    if (activeKernel.type === 'conda') {
+      if (code.includes('import matplotlib') || code.includes('plt.')) {
+        result = {
+          output_type: 'display_data',
+          data: {
+            'image/png': 'base64-encoded-image-data',
+            'text/plain': '[Conda Matplotlib figure]'
+          },
+          metadata: {}
+        };
+      } else if (code.includes('import pandas') || code.includes('pd.')) {
+        result = {
+          output_type: 'execute_result',
+          data: {
+            'text/html': '<table><tr><th>Column1</th><th>Column2</th></tr><tr><td>1</td><td>2</td></tr></table>',
+            'text/plain': '   Column1  Column2\n0        1        2'
+          },
+          execution_count: 1,
+          metadata: {}
+        };
+      } else if (code.includes('print(')) {
+        const match = code.match(/print\(['"](.*)['"]\)/);
+        const text = match ? match[1] : 'Hello from Conda environment!';
+        result = {
+          output_type: 'stream',
+          name: 'stdout',
+          text: text
+        };
+      } else {
+        result = {
+          output_type: 'execute_result',
+          data: {
+            'text/plain': `Result from Conda environment: ${Math.random() * 100}`
+          },
+          execution_count: 1,
+          metadata: {}
+        };
+      }
+    } else if (activeKernel.type === 'docker') {
+      if (code.includes('import tensorflow') || code.includes('tf.')) {
+        result = {
+          output_type: 'stream',
+          name: 'stdout',
+          text: 'TensorFlow initialized in Docker container'
+        };
+      } else if (code.includes('import torch') || code.includes('torch.')) {
+        result = {
+          output_type: 'stream',
+          name: 'stdout',
+          text: 'PyTorch initialized in Docker container'
+        };
+      } else if (code.includes('print(')) {
+        const match = code.match(/print\(['"](.*)['"]\)/);
+        const text = match ? match[1] : 'Hello from Docker container!';
+        result = {
+          output_type: 'stream',
+          name: 'stdout',
+          text: text
+        };
+      } else {
+        result = {
+          output_type: 'execute_result',
+          data: {
+            'text/plain': `Result from Docker container: ${Math.random() * 100}`
+          },
+          execution_count: 1,
+          metadata: {}
+        };
+      }
+    } else if (activeKernel.type === 'terminal') {
       result = {
         output_type: 'stream',
         name: 'stdout',
-        text: `Output from ${activeKernel.name}: Hello, world!`
-      };
-    } else if (code.includes('import matplotlib') || code.includes('plt.')) {
-      result = {
-        output_type: 'display_data',
-        data: {
-          'image/png': 'base64-encoded-image-data',
-          'text/plain': '[Matplotlib figure]'
-        },
-        metadata: {}
+        text: `Terminal output from ${activeKernel.host}:${activeKernel.port}: ${code}`
       };
     } else {
       result = {

@@ -110,6 +110,8 @@ const Notebook = ({ notebook, onSave }) => {
         )
       );
       
+      console.log(`Executing cell in kernel: ${activeKernel.name} (${activeKernel.type})`);
+      
       // Execute the code
       const result = await kernelService.executeCode(cell.content);
       
@@ -119,6 +121,12 @@ const Notebook = ({ notebook, onSave }) => {
           c.id === id ? { ...c, executing: false, outputs: result.outputs } : c
         )
       );
+      
+      // If this is the last cell, automatically add a new code cell
+      const cellIndex = cells.findIndex(c => c.id === id);
+      if (cellIndex === cells.length - 1) {
+        addCell('code');
+      }
     } catch (error) {
       console.error('Error executing cell:', error);
       

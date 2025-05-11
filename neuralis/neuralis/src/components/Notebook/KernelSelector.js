@@ -372,8 +372,24 @@ const KernelSelector = ({ onKernelChange }) => {
         // Close the environment selector
         setShowEnvironmentSelector(false);
         
-        // Refresh kernels
-        refreshKernels();
+        // Automatically connect to the newly created kernel
+        try {
+          console.log('Connecting to newly created kernel:', result.name);
+          const kernel = await kernelService.startKernel(result.name);
+          
+          if (kernel) {
+            console.log('Connected to kernel:', kernel);
+            setIsConnected(true);
+            setSuccess(`Successfully connected to ${kernel.displayName || kernel.name}`);
+            
+            if (onKernelChange) {
+              onKernelChange(kernel);
+            }
+          }
+        } catch (connErr) {
+          console.error('Failed to connect to newly created kernel:', connErr);
+          setError(`Created environment but failed to connect: ${connErr.message}`);
+        }
       }
     } catch (err) {
       console.error('Failed to create environment:', err);
