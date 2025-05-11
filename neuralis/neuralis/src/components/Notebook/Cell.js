@@ -148,6 +148,39 @@ const OutputTable = styled.div`
   }
 `;
 
+// Define Python syntax highlighting options
+const pythonLanguageConfiguration = {
+  comments: {
+    lineComment: '#',
+  },
+  brackets: [
+    ['{', '}'],
+    ['[', ']'],
+    ['(', ')']
+  ],
+  autoClosingPairs: [
+    { open: '{', close: '}' },
+    { open: '[', close: ']' },
+    { open: '(', close: ')' },
+    { open: '"', close: '"', notIn: ['string'] },
+    { open: "'", close: "'", notIn: ['string', 'comment'] },
+  ],
+  surroundingPairs: [
+    { open: '{', close: '}' },
+    { open: '[', close: ']' },
+    { open: '(', close: ')' },
+    { open: '"', close: '"' },
+    { open: "'", close: "'" },
+  ],
+  folding: {
+    offSide: true,
+    markers: {
+      start: new RegExp('^\\s*#\\s*region\\b'),
+      end: new RegExp('^\\s*#\\s*endregion\\b')
+    }
+  }
+};
+
 function Cell({ cell, isActive, onActivate, onChange, onExecute }) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(cell.content);
@@ -161,9 +194,116 @@ function Cell({ cell, isActive, onActivate, onChange, onExecute }) {
   }, [isActive, cell.type]);
   
   // Handle editor mount
-  const handleEditorDidMount = (editor) => {
+  const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     editor.focus();
+    
+    // Configure Python syntax highlighting
+    if (cell.type === 'code') {
+      // Register Python language if not already registered
+      if (!monaco.languages.getLanguages().some(lang => lang.id === 'python')) {
+        monaco.languages.register({ id: 'python' });
+        
+        // Set language configuration
+        monaco.languages.setLanguageConfiguration('python', pythonLanguageConfiguration);
+        
+        // Define Python syntax highlighting
+        monaco.languages.setMonarchTokensProvider('python', {
+          defaultToken: '',
+          tokenPostfix: '.python',
+          keywords: [
+            'and', 'as', 'assert', 'break', 'class', 'continue', 'def',
+            'del', 'elif', 'else', 'except', 'exec', 'finally', 'for',
+            'from', 'global', 'if', 'import', 'in', 'is', 'lambda',
+            'not', 'or', 'pass', 'print', 'raise', 'return', 'self',
+            'try', 'while', 'with', 'yield', 'None', 'True', 'False'
+          ],
+          
+          operators: [
+            '+', '-', '*', '**', '/', '//', '%', '<<', '>>', '&', '|', '^', '~',
+            '<', '>', '<=', '>=', '==', '!=', '<>', '='
+          ],
+          
+          // we include these common regular expressions
+          symbols: /[=><!~?:&|+\-*\/\^%]+/,
+          escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+          
+          // The main tokenizer for our languages
+          tokenizer: {
+            root: [
+              [/[a-zA-Z_]\w*/, {
+                cases: {
+                  '@keywords': 'keyword',
+                  '@default': 'identifier'
+                }
+              }],
+              
+              // Strings
+              [/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-terminated string
+              [/'([^'\\]|\\.)*$/, 'string.invalid'],  // non-terminated string
+              [/"/, 'string', '@string_double'],
+              [/'/, 'string', '@string_single'],
+              
+              // Numbers
+              [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
+              [/0[xX][0-9a-fA-F]+/, 'number.hex'],
+              [/\d+/, 'number'],
+              
+              // Delimiter: after number because of .\d floats
+              [/[;,.]/, 'delimiter'],
+              
+              // Comments
+              [/#.*$/, 'comment'],
+              
+              // Whitespace
+              [/\s+/, 'white']
+            ],
+            
+            string_double: [
+              [/[^\\"]+/, 'string'],
+              [/@escapes/, 'string.escape'],
+              [/\\./, 'string.escape.invalid'],
+              [/"/, 'string', '@pop']
+            ],
+            
+            string_single: [
+              [/[^\\']+/, 'string'],
+              [/@escapes/, 'string.escape'],
+              [/\\./, 'string.escape.invalid'],
+              [/'/, 'string', '@pop']
+            ],
+          }
+        });
+      }
+      
+      // Define Python theme
+      monaco.editor.defineTheme('pythonTheme', {
+        base: 'vs',
+        inherit: true,
+        rules: [
+          { token: 'keyword', foreground: '0000FF', fontStyle: 'bold' },
+          { token: 'string', foreground: 'A31515' },
+          { token: 'comment', foreground: '008000' },
+          { token: 'number', foreground: '098658' },
+          { token: 'operator', foreground: 'AF00DB' },
+          { token: 'delimiter', foreground: '000000' },
+          { token: 'type', foreground: '267F99' },
+          { token: 'identifier', foreground: '001080' },
+          { token: 'function', foreground: '795E26' }
+        ],
+        colors: {
+          'editor.foreground': '#000000',
+          'editor.background': '#FFFFFF',
+          'editor.selectionBackground': '#ADD6FF',
+          'editor.lineHighlightBackground': '#F7F7F7',
+          'editorCursor.foreground': '#000000',
+          'editorWhitespace.foreground': '#BFBFBF'
+        }
+      });
+      
+      // Set the theme
+      monaco.editor.setTheme('pythonTheme');
+    }
   };
   
   // Handle content change
@@ -267,7 +407,7 @@ function Cell({ cell, isActive, onActivate, onChange, onExecute }) {
             width="100%"
             height={Math.max(100, cell.content.split('\n').length * 20)}
             language={cell.type === 'code' ? 'python' : 'markdown'}
-            theme="vs-light"
+            theme={cell.type === 'code' ? 'pythonTheme' : 'vs-light'}
             value={content}
             options={{
               minimap: { enabled: false },
@@ -275,7 +415,18 @@ function Cell({ cell, isActive, onActivate, onChange, onExecute }) {
               wordWrap: 'on',
               wrappingIndent: 'indent',
               automaticLayout: true,
-              lineNumbers: cell.type === 'code' ? 'on' : 'off'
+              lineNumbers: cell.type === 'code' ? 'on' : 'off',
+              renderLineHighlight: 'all',
+              highlightActiveIndentGuide: true,
+              scrollbar: {
+                useShadows: false,
+                verticalHasArrows: false,
+                horizontalHasArrows: false,
+                vertical: 'visible',
+                horizontal: 'visible',
+                verticalScrollbarSize: 10,
+                horizontalScrollbarSize: 10
+              }
             }}
             onChange={handleContentChange}
             editorDidMount={handleEditorDidMount}
