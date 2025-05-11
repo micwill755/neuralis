@@ -64,9 +64,15 @@ const Item = styled.div`
   }
 `;
 
-const ItemIcon = styled.span`
+const ItemIcon = styled.div`
   margin-right: 6px;
   font-size: 14px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.color || '#666'};
 `;
 
 const SidebarLayout = styled.div`
@@ -87,8 +93,46 @@ function Sidebar({ onSelectNotebook, onSelectFile, selectedItem }) {
   const files = [
     { name: 'data.csv', path: '/data/data.csv' },
     { name: 'config.json', path: '/config/config.json' },
-    { name: 'README.md', path: '/README.md' }
+    { name: 'README.md', path: '/README.md' },
+    { name: 'script.py', path: '/scripts/script.py' },
+    { name: 'styles.css', path: '/styles/styles.css' },
+    { name: 'app.js', path: '/scripts/app.js' }
   ];
+  
+  // Get file icon and color based on file extension
+  const getFileIconAndColor = (fileName) => {
+    const extension = fileName.split('.').pop().toLowerCase();
+    
+    switch (extension) {
+      case 'ipynb':
+        return { icon: '📓', color: '#F37626' }; // Jupyter orange
+      case 'py':
+        return { icon: '🐍', color: '#3572A5' }; // Python blue
+      case 'js':
+        return { icon: 'JS', color: '#F7DF1E' }; // JavaScript yellow
+      case 'json':
+        return { icon: '{ }', color: '#000080' }; // JSON navy
+      case 'css':
+        return { icon: '🎨', color: '#563D7C' }; // CSS purple
+      case 'html':
+        return { icon: '🌐', color: '#E34C26' }; // HTML orange
+      case 'md':
+        return { icon: '📝', color: '#083FA1' }; // Markdown blue
+      case 'csv':
+        return { icon: '📊', color: '#217346' }; // Excel green
+      case 'txt':
+        return { icon: '📄', color: '#7F7F7F' }; // Text gray
+      case 'pdf':
+        return { icon: '📕', color: '#FF0000' }; // PDF red
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'gif':
+        return { icon: '🖼️', color: '#FF9E80' }; // Image orange
+      default:
+        return { icon: '📄', color: '#7F7F7F' }; // Default gray
+    }
+  };
   
   const renderTabContent = () => {
     switch (activeTab) {
@@ -97,30 +141,36 @@ function Sidebar({ onSelectNotebook, onSelectFile, selectedItem }) {
           <>
             <SectionTitle>Notebooks</SectionTitle>
             <ItemList>
-              {notebooks.map((notebook, index) => (
-                <Item 
-                  key={index} 
-                  selected={selectedItem && selectedItem.path === notebook.path}
-                  onClick={() => onSelectNotebook(notebook)}
-                >
-                  <ItemIcon>📓</ItemIcon>
-                  {notebook.name}
-                </Item>
-              ))}
+              {notebooks.map((notebook, index) => {
+                const { icon, color } = getFileIconAndColor(notebook.name);
+                return (
+                  <Item 
+                    key={index} 
+                    selected={selectedItem && selectedItem.path === notebook.path}
+                    onClick={() => onSelectNotebook(notebook)}
+                  >
+                    <ItemIcon color={color}>{icon}</ItemIcon>
+                    {notebook.name}
+                  </Item>
+                );
+              })}
             </ItemList>
             
             <SectionTitle>Files</SectionTitle>
             <ItemList>
-              {files.map((file, index) => (
-                <Item 
-                  key={index} 
-                  selected={selectedItem && selectedItem.path === file.path}
-                  onClick={() => onSelectFile(file)}
-                >
-                  <ItemIcon>📄</ItemIcon>
-                  {file.name}
-                </Item>
-              ))}
+              {files.map((file, index) => {
+                const { icon, color } = getFileIconAndColor(file.name);
+                return (
+                  <Item 
+                    key={index} 
+                    selected={selectedItem && selectedItem.path === file.path}
+                    onClick={() => onSelectFile(file)}
+                  >
+                    <ItemIcon color={color}>{icon}</ItemIcon>
+                    {file.name}
+                  </Item>
+                );
+              })}
             </ItemList>
           </>
         );
