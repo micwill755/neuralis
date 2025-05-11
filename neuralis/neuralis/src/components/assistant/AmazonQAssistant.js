@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import { sendMessageToAmazonQ, parseAmazonQResponse } from '../../services/amazonQService';
 
 const AssistantContainer = styled.div`
   display: flex;
@@ -68,6 +69,7 @@ const MessageBubble = styled.div`
   background-color: ${props => props.isUser ? '#e3f2fd' : 'white'};
   border: 1px solid ${props => props.isUser ? '#bbdefb' : '#e0e0e0'};
   color: #333;
+  white-space: pre-wrap;
 `;
 
 const MessageTime = styled.div`
@@ -107,6 +109,16 @@ const CodeButton = styled.button`
   }
 `;
 
+const ErrorMessage = styled.div`
+  color: #d32f2f;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+`;
+
 function AmazonQAssistant() {
   const [messages, setMessages] = useState([
     {
@@ -119,6 +131,7 @@ function AmazonQAssistant() {
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const chatEndRef = useRef(null);
   
   // Auto-scroll to bottom when messages change
@@ -126,7 +139,7 @@ function AmazonQAssistant() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
     
     // Add user message
@@ -141,75 +154,31 @@ function AmazonQAssistant() {
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
+    setError(null);
     
-    // Simulate AI response
-    setTimeout(() => {
-      let responseText = '';
-      let hasCode = false;
-      let code = '';
+    try {
+      // Send message to Amazon Q CLI
+      const response = await sendMessageToAmazonQ(inputText);
       
-      // Generate different responses based on input
-      if (inputText.toLowerCase().includes('hello') || inputText.toLowerCase().includes('hi')) {
-        responseText = "Hello! How can I help you with your code or data analysis today?";
-      } else if (inputText.toLowerCase().includes('plot') || inputText.toLowerCase().includes('graph') || inputText.toLowerCase().includes('chart')) {
-        responseText = "Here's a simple matplotlib code to create a line plot:";
-        hasCode = true;
-        code = `import matplotlib.pyplot as plt
-import numpy as np
-
-# Generate data
-x = np.linspace(0, 10, 100)
-y = np.sin(x)
-
-# Create plot
-plt.figure(figsize=(8, 4))
-plt.plot(x, y, 'b-', linewidth=2)
-plt.title('Sine Wave')
-plt.xlabel('x')
-plt.ylabel('sin(x)')
-plt.grid(True)
-plt.show()`;
-      } else if (inputText.toLowerCase().includes('pandas') || inputText.toLowerCase().includes('dataframe') || inputText.toLowerCase().includes('data')) {
-        responseText = "Here's how you can create and manipulate a pandas DataFrame:";
-        hasCode = true;
-        code = `import pandas as pd
-
-# Create a sample DataFrame
-data = {
-    'Name': ['Alice', 'Bob', 'Charlie', 'David'],
-    'Age': [25, 30, 35, 40],
-    'City': ['New York', 'San Francisco', 'Los Angeles', 'Chicago'],
-    'Salary': [70000, 80000, 90000, 100000]
-}
-
-df = pd.DataFrame(data)
-
-# Display the DataFrame
-print(df)
-
-# Basic operations
-print("\\nBasic statistics:")
-print(df.describe())
-
-# Filtering
-print("\\nPeople older than 30:")
-print(df[df['Age'] > 30])`;
-      } else {
-        responseText = "I'm here to help with your Python code and data analysis tasks. You can ask me about pandas, matplotlib, scikit-learn, or any other Python libraries. What would you like to know?";
-      }
+      // Parse the response to extract code blocks
+      const parsedResponse = parseAmazonQResponse(response);
       
       const aiMessage = {
         id: Date.now(),
-        text: responseText,
+        text: parsedResponse.text,
         isUser: false,
         timestamp: new Date(),
-        hasCode,
-        code
+        hasCode: parsedResponse.codeBlocks.length > 0,
+        codeBlocks: parsedResponse.codeBlocks
       };
       
       setMessages(prev => [...prev, aiMessage]);
+    } catch (err) {
+      console.error('Error communicating with Amazon Q:', err);
+      setError(`Failed to get response from Amazon Q: ${err.message}`);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
   
   const handleKeyDown = (e) => {
@@ -238,19 +207,19 @@ print(df[df['Age'] > 30])`;
           <Message key={message.id} isUser={message.isUser}>
             <MessageBubble isUser={message.isUser}>
               {message.text}
-              {message.hasCode && (
-                <>
-                  <CodeBlock>{message.code}</CodeBlock>
+              {message.hasCode && message.codeBlocks && message.codeBlocks.map((code, index) => (
+                <div key={index}>
+                  <CodeBlock>{code}</CodeBlock>
                   <CodeActions>
-                    <CodeButton onClick={() => navigator.clipboard.writeText(message.code)}>
+                    <CodeButton onClick={() => navigator.clipboard.writeText(code)}>
                       Copy
                     </CodeButton>
-                    <CodeButton onClick={() => insertCodeToNotebook(message.code)}>
+                    <CodeButton onClick={() => insertCodeToNotebook(code)}>
                       Insert to Notebook
                     </CodeButton>
                   </CodeActions>
-                </>
-              )}
+                </div>
+              ))}
             </MessageBubble>
             <MessageTime isUser={message.isUser}>
               {formatTimestamp(message.timestamp)}
@@ -270,6 +239,11 @@ print(df[df['Age'] > 30])`;
               </div>
             </MessageBubble>
           </Message>
+        )}
+        {error && (
+          <ErrorMessage>
+            {error}
+          </ErrorMessage>
         )}
         <div ref={chatEndRef} />
       </ChatContainer>

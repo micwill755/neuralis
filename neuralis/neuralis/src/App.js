@@ -331,6 +331,25 @@ function App() {
     };
   }, [selectedNotebook]);
   
+  // Listen for kernel setup events
+  useEffect(() => {
+    const handleKernelSetup = (event) => {
+      const { type } = event.detail;
+      
+      // Open the kernel setup modal with the selected type
+      console.log(`Opening kernel setup for: ${type}`);
+      
+      // Here you would open your kernel setup modal
+      // For now, we'll just show an alert
+      alert(`Setting up ${type} environment. This feature will be implemented soon.`);
+    };
+    
+    window.addEventListener('openKernelSetup', handleKernelSetup);
+    return () => {
+      window.removeEventListener('openKernelSetup', handleKernelSetup);
+    };
+  }, []);
+  
   return (
     <AppContainer>
       <Header>

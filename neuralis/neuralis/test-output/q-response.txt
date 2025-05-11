@@ -1,0 +1,79 @@
+To learn more about MCP safety, see https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line-mcp-security.html
+[1G[2K⠋[38;5;12m 0[0m of [38;5;12m1 [0mmcp servers initialized
+[1G[1A[2K⠋[38;5;12m 0[0m of [38;5;12m2 [0mmcp servers initialized
+7[1G[1A⠙87[1G[1A⠹87[1G[1A⠸87[1G[1A⠼87[1G[1A⠴87[1G[1A⠦87[1G[1A⠧87[1G[1A⠇8[1G[1A[2K[38;5;10m✓ [38;5;12mkaggle[0m loaded in [38;5;11m0.45 s
+⠇[38;5;12m 1[0m of [38;5;12m2 [0mmcp servers initialized
+[1G[1A[2K[38;5;10m✓ [38;5;12mjupyter[0m loaded in [38;5;11m0.46 s
+[38;5;10m✓[0m[38;5;12m 2[0m of [38;5;12m2 [0mmcp servers initialized
+
+[90m
+[92m/help[90m all commands  [1m•[22m  [92mctrl + j[90m new lines  [1m•[22m  [92mctrl + k[90m fuzzy search
+[39m[38;5;8m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[39m
+[39mHere's a simple Python function to calculate the factorial of a number:[0m[0m
+[0m[0m
+[1mpython
+[0m[38;5;10mdef factorial(n):
+    """
+    Calculate the factorial of a non-negative integer n.
+    
+    Args:
+        n (int): A non-negative integer
+        
+    Returns:
+        int: The factorial of n (n!)
+        
+    Raises:
+        ValueError: If n is negative
+    """
+    if not isinstance(n, int):
+        raise TypeError("Input must be an integer")
+    
+    if n < 0:
+        raise ValueError("Factorial is not defined for negative numbers")
+    
+    if n == 0 or n == 1:
+        return 1
+    
+    result = 1
+    for i in range(2, n + 1):
+        result *= i
+    
+    return result
+[0m[0m[0m
+[0m[0m
+This function:[0m[0m
+• Validates that the input is an integer[0m[0m
+• Checks if the number is negative (factorial isn't defined for negative numbers)[0m[0m
+• Handles the base cases (0! and 1! both equal 1)[0m[0m
+• Uses a loop to calculate the factorial for numbers greater than 1[0m[0m
+[0m[0m
+You could also implement this recursively:[0m[0m
+[0m[0m
+[1mpython
+[0m[38;5;10mdef factorial_recursive(n):
+    """
+    Calculate the factorial of a non-negative integer n using recursion.
+    
+    Args:
+        n (int): A non-negative integer
+        
+    Returns:
+        int: The factorial of n (n!)
+        
+    Raises:
+        ValueError: If n is negative
+    """
+    if not isinstance(n, int):
+        raise TypeError("Input must be an integer")
+        
+    if n < 0:
+        raise ValueError("Factorial is not defined for negative numbers")
+    
+    if n == 0 or n == 1:
+        return 1
+    
+    return n * factorial_recursive(n - 1)
+[0m[0m[0m
+[0m[0m
+Note that the recursive version might cause a stack overflow for very large inputs, so the iterative version is generally 
+preferred for production code.[0m[0m
