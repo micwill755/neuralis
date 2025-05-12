@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import SplitPane from 'react-split-pane';
 import styled from 'styled-components';
 import Sidebar from './components/Layout/Sidebar';
-import Notebook from './components/Notebook/Notebook';
+import Notebook from './components/Notebook';
 import FileViewer from './components/FileViewer/FileViewer';
 import AmazonQAssistant from './components/assistant/AmazonQAssistant';
 import './App.css';

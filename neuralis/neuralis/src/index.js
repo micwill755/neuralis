@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+// Import the JupyterLab theme CSS
+import './styles/jupyter-lab-theme.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 

@@ -1,48 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import kernelService from '../../services/kernelService';
-
-const SelectorContainer = styled.div`
-  margin-bottom: 20px;
-`;
-
-const Select = styled.select`
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  background-color: white;
-  min-width: 200px;
-`;
-
-const Button = styled.button`
-  background-color: #f1f1f1;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 8px 12px;
-  margin-left: 10px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-  
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
-
-const StatusIndicator = styled.span`
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-  background-color: ${props => props.active ? '#4CAF50' : '#ccc'};
-`;
 
 const KernelSelector = ({ onKernelChange }) => {
   const [availableKernels, setAvailableKernels] = useState([]);
+  const [dockerContainers, setDockerContainers] = useState([]);
+  const [condaEnvironments, setCondaEnvironments] = useState([]);
+  const [terminalInstances, setTerminalInstances] = useState([]);
   const [selectedKernel, setSelectedKernel] = useState('');
   const [activeKernel, setActiveKernel] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +16,30 @@ const KernelSelector = ({ onKernelChange }) => {
       setIsLoading(true);
       try {
         await kernelService.initialize();
+        
+        // Get kernels from Jupyter server
         const kernels = await kernelService.listKernels();
         setAvailableKernels(kernels);
+        
+        // Get Docker containers
+        const containers = await kernelService.listContainers();
+        setDockerContainers(containers);
+        
+        // Get conda environments (if available)
+        try {
+          const condaEnvs = await fetch('/api/kernels/conda-environments').then(res => res.json());
+          setCondaEnvironments(condaEnvs.environments || []);
+        } catch (error) {
+          console.warn('Could not fetch conda environments:', error);
+        }
+        
+        // Get terminal instances (if available)
+        try {
+          const terminals = await fetch('/api/terminals').then(res => res.json());
+          setTerminalInstances(terminals || []);
+        } catch (error) {
+          console.warn('Could not fetch terminal instances:', error);
+        }
         
         if (kernels.length > 0) {
           setSelectedKernel(kernels[0].name);
@@ -93,47 +78,108 @@ const KernelSelector = ({ onKernelChange }) => {
   };
   
   const handleDisconnectKernel = async () => {
-    // For now, we'll just clear the active kernel state
-    // In a real implementation, you might want to properly shut down the kernel
     setActiveKernel(null);
     if (onKernelChange) {
       onKernelChange(null);
     }
   };
   
+  // Group all kernel options by type
+  const allKernelOptions = [
+    ...availableKernels.map(k => ({ 
+      id: k.name, 
+      name: k.displayName || k.name, 
+      type: 'jupyter' 
+    })),
+    ...dockerContainers.map(c => ({ 
+      id: `docker-${c.name}`, 
+      name: `Docker: ${c.name}`, 
+      type: 'docker' 
+    })),
+    ...condaEnvironments.map(env => ({ 
+      id: `conda-${env.name}`, 
+      name: `Conda: ${env.name}`, 
+      type: 'conda' 
+    })),
+    ...terminalInstances.map(term => ({ 
+      id: `term-${term.name}`, 
+      name: `Terminal: ${term.name}`, 
+      type: 'terminal' 
+    }))
+  ];
+  
   return (
-    <SelectorContainer>
-      <Select 
+    <div className="jp-kernel-selector">
+      <select 
         value={selectedKernel} 
         onChange={handleKernelSelect}
         disabled={isLoading || activeKernel}
+        className="jp-kernel-dropdown"
       >
         <option value="">Select a kernel...</option>
-        {availableKernels.map(kernel => (
-          <option key={kernel.name} value={kernel.name}>
-            {kernel.displayName || kernel.name}
-          </option>
-        ))}
-      </Select>
+        
+        {/* Group options by type */}
+        {availableKernels.length > 0 && (
+          <optgroup label="Jupyter Kernels">
+            {availableKernels.map(kernel => (
+              <option key={kernel.name} value={kernel.name}>
+                {kernel.displayName || kernel.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        
+        {dockerContainers.length > 0 && (
+          <optgroup label="Docker Containers">
+            {dockerContainers.map(container => (
+              <option key={`docker-${container.name}`} value={`docker-${container.name}`}>
+                {container.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        
+        {condaEnvironments.length > 0 && (
+          <optgroup label="Conda Environments">
+            {condaEnvironments.map(env => (
+              <option key={`conda-${env.name}`} value={`conda-${env.name}`}>
+                {env.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        
+        {terminalInstances.length > 0 && (
+          <optgroup label="Terminal Instances">
+            {terminalInstances.map(term => (
+              <option key={`term-${term.name}`} value={`term-${term.name}`}>
+                {term.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
       
       {activeKernel ? (
-        <>
-          <StatusIndicator active={true} />
-          <span>Connected to {activeKernel.name}</span>
-          <Button onClick={handleDisconnectKernel} disabled={isLoading}>
-            Disconnect
-          </Button>
-        </>
+        <button 
+          className="jp-toolbar-button jp-mod-small"
+          onClick={handleDisconnectKernel} 
+          disabled={isLoading}
+        >
+          Disconnect
+        </button>
       ) : (
-        <Button 
+        <button 
+          className="jp-toolbar-button jp-mod-small"
           onClick={handleConnectKernel} 
           disabled={isLoading || !selectedKernel}
         >
           {isLoading ? 'Connecting...' : 'Connect'}
-        </Button>
+        </button>
       )}
-    </SelectorContainer>
+    </div>
   );
 };
 
 export default KernelSelector;
+

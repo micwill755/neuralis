@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
-import './Notebook.css';
 
 // Function to clean ANSI color codes from output
 const cleanAnsiCodes = (text) => {
@@ -18,7 +17,20 @@ const cleanAnsiCodes = (text) => {
   }
 };
 
-const Cell = ({ id, type, content, isActive, onChange, onFocus, output, onRunCell }) => {
+const Cell = ({ 
+  id, 
+  type, 
+  content, 
+  isActive, 
+  isRunning,
+  onChange, 
+  onFocus, 
+  output, 
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  onRun
+}) => {
   const editorRef = useRef(null);
   
   const handleEditorChange = (value) => {
@@ -33,7 +45,7 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output, onRunCel
     // Check for Shift+Enter to run cell
     if (event.key === 'Enter' && event.shiftKey && type === 'code') {
       event.preventDefault();
-      onRunCell && onRunCell(id);
+      onRun && onRun();
     }
   };
   
@@ -72,28 +84,52 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output, onRunCel
   
   return (
     <div 
-      className={`cell-container ${isActive ? 'active' : ''}`} 
+      className={`jp-cell ${isActive ? 'jp-mod-active' : ''} ${isRunning ? 'jp-mod-running' : ''}`}
       onClick={() => onFocus(id)}
       onKeyDown={handleKeyDown}
     >
-      <div className="cell-prompt-area">
-        <div className={`cell-prompt ${type === 'markdown' ? 'markdown' : ''}`}>
-          {type === 'code' ? 
-            (output?.executionCount ? `[${output.executionCount}]:` : 'In [ ]:') : 
-            ''}
-        </div>
-        <div className={`cell-content-area ${isActive ? 'active' : ''}`}>
-          <div className="cell-content">
-            {type === 'code' ? (
+      <div className={`jp-cell-prompt ${type === 'markdown' ? 'jp-mod-markdown' : ''}`}>
+        {type === 'code' ? 
+          (output?.executionCount ? `[${output.executionCount}]:` : 'In [ ]:') : 
+          ''}
+      </div>
+      
+      <div className="jp-cell-input">
+        <div className="jp-cell-editor">
+          {type === 'code' ? (
+            <MonacoEditor
+              height="100px"
+              language="python"
+              value={content}
+              onChange={handleEditorChange}
+              onMount={handleEditorDidMount}
+              options={{
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                lineNumbers: 'off',
+                glyphMargin: false,
+                folding: true,
+                lineDecorationsWidth: 0,
+                lineNumbersMinChars: 0,
+                automaticLayout: true,
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto'
+                }
+              }}
+            />
+          ) : (
+            isActive ? (
               <MonacoEditor
                 height="100px"
-                language="python"
+                language="markdown"
                 value={content}
                 onChange={handleEditorChange}
                 onMount={handleEditorDidMount}
                 options={{
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
+                  wordWrap: 'on',
                   lineNumbers: 'off',
                   glyphMargin: false,
                   folding: true,
@@ -107,43 +143,52 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output, onRunCel
                 }}
               />
             ) : (
-              isActive ? (
-                <MonacoEditor
-                  height="100px"
-                  language="markdown"
-                  value={content}
-                  onChange={handleEditorChange}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    wordWrap: 'on',
-                    lineNumbers: 'off',
-                    glyphMargin: false,
-                    folding: true,
-                    lineDecorationsWidth: 0,
-                    lineNumbersMinChars: 0,
-                    automaticLayout: true,
-                    scrollbar: {
-                      vertical: 'auto',
-                      horizontal: 'auto'
-                    }
-                  }}
-                />
-              ) : (
-                <div className="markdown-content">
-                  <ReactMarkdown>{content}</ReactMarkdown>
-                </div>
-              )
-            )}
-          </div>
+              <div className="jp-markdown-rendered">
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
+            )
+          )}
         </div>
+      </div>
+      
+      {/* Cell toolbar */}
+      <div className="jp-cell-toolbar">
+        <button 
+          className="jp-cell-toolbar-button" 
+          onClick={(e) => { e.stopPropagation(); onRun && onRun(); }}
+          title="Run Cell"
+        >
+          ▶
+        </button>
+        <button 
+          className="jp-cell-toolbar-button" 
+          onClick={(e) => { e.stopPropagation(); onMoveUp && onMoveUp(); }}
+          title="Move Up"
+        >
+          ↑
+        </button>
+        <button 
+          className="jp-cell-toolbar-button" 
+          onClick={(e) => { e.stopPropagation(); onMoveDown && onMoveDown(); }}
+          title="Move Down"
+        >
+          ↓
+        </button>
+        <button 
+          className="jp-cell-toolbar-button" 
+          onClick={(e) => { e.stopPropagation(); onDelete && onDelete(); }}
+          title="Delete Cell"
+        >
+          🗑
+        </button>
       </div>
       
       {/* Display cell output if available */}
       {type === 'code' && output && (
-        <div className={`cell-output ${output.status === 'error' ? 'error' : ''}`}>
-          {cleanedOutput}
+        <div className={`jp-cell-output ${output.status === 'error' ? 'jp-cell-output-error' : ''}`}>
+          <div className="jp-cell-output-text">
+            {cleanedOutput}
+          </div>
           
           {/* Display image if available */}
           {output.imageData && (

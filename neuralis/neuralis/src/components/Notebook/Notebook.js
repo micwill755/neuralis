@@ -1,59 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
 import Cell from './Cell';
 import KernelSelector from './KernelSelector';
+import NotebookToolbar from './NotebookToolbar';
 import kernelService from '../../services/kernelService';
-
-const NotebookContainer = styled.div`
-  padding: 20px;
-  background-color: white;
-  height: 100%;
-  overflow: auto;
-`;
-
-const NotebookTitle = styled.h1`
-  margin-top: 0;
-  margin-bottom: 20px;
-`;
-
-const AddCellButton = styled.button`
-  background-color: #f1f1f1;
-  border: 1px dashed #ccc;
-  border-radius: 4px;
-  padding: 8px 16px;
-  margin: 10px 0;
-  width: 100%;
-  text-align: center;
-  cursor: pointer;
-  color: #666;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const Button = styled.button`
-  background-color: #f1f1f1;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 6px 12px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #e9e9e9;
-  }
-  
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
 
 const Notebook = ({ notebook, onUpdateCells }) => {
   const [cells, setCells] = useState([]);
@@ -61,6 +10,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
   const [activeKernel, setActiveKernel] = useState(null);
   const [cellOutputs, setCellOutputs] = useState({});
   const [runningCell, setRunningCell] = useState(null);
+  const [kernelStatus, setKernelStatus] = useState('offline'); // 'idle', 'busy', 'offline'
   const previousNotebookRef = useRef(notebook);
   
   useEffect(() => {
@@ -118,20 +68,38 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     setActiveCell(id);
   };
   
-  const addCell = (type, content = '') => {
+  const addCell = (type, content = '', position = 'end') => {
     const newCell = {
       id: Date.now(), // Simple unique ID
       type: type,
       content: content || (type === 'markdown' ? '## New Markdown Cell' : '# New code cell')
     };
     
-    setCells([...cells, newCell]);
+    if (position === 'end') {
+      setCells([...cells, newCell]);
+    } else if (position === 'start') {
+      setCells([newCell, ...cells]);
+    } else if (activeCell) {
+      // Insert after active cell
+      const activeIndex = cells.findIndex(cell => cell.id === activeCell);
+      if (activeIndex !== -1) {
+        const newCells = [...cells];
+        newCells.splice(activeIndex + 1, 0, newCell);
+        setCells(newCells);
+      } else {
+        setCells([...cells, newCell]);
+      }
+    } else {
+      setCells([...cells, newCell]);
+    }
+    
     setActiveCell(newCell.id);
     return newCell;
   };
   
   const handleKernelChange = (kernel) => {
     setActiveKernel(kernel);
+    setKernelStatus(kernel ? 'idle' : 'offline');
     console.log('Kernel connected:', kernel);
   };
   
@@ -149,6 +117,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     
     try {
       setRunningCell(activeCell);
+      setKernelStatus('busy');
       
       // Clear previous output for this cell
       setCellOutputs(prev => ({
@@ -178,8 +147,10 @@ const Notebook = ({ notebook, onUpdateCells }) => {
             }
           }));
           setRunningCell(null);
+          setKernelStatus('idle');
         } else if (result.type === 'execution_complete') {
           setRunningCell(null);
+          setKernelStatus('idle');
         }
       });
     } catch (error) {
@@ -192,47 +163,198 @@ const Notebook = ({ notebook, onUpdateCells }) => {
         }
       }));
       setRunningCell(null);
+      setKernelStatus('idle');
+    }
+  };
+  
+  const runAllCells = async () => {
+    if (!activeKernel) return;
+    
+    const codeCells = cells.filter(cell => cell.type === 'code');
+    if (codeCells.length === 0) return;
+    
+    for (const cell of codeCells) {
+      setActiveCell(cell.id);
+      setRunningCell(cell.id);
+      setKernelStatus('busy');
+      
+      // Clear previous output for this cell
+      setCellOutputs(prev => ({
+        ...prev,
+        [cell.id]: { status: 'running', output: '' }
+      }));
+      
+      try {
+        // Execute the code in the kernel
+        await new Promise((resolve) => {
+          kernelService.executeCode(cell.content, (result) => {
+            if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
+              // Update the output for this cell
+              setCellOutputs(prev => ({
+                ...prev,
+                [cell.id]: {
+                  status: 'success',
+                  output: (prev[cell.id]?.output || '') + result.content,
+                  imageData: result.imageData,
+                  executionCount: result.executionCount
+                }
+              }));
+            } else if (result.type === 'error') {
+              setCellOutputs(prev => ({
+                ...prev,
+                [cell.id]: {
+                  status: 'error',
+                  output: result.content
+                }
+              }));
+              resolve();
+            } else if (result.type === 'execution_complete') {
+              resolve();
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error running cell:', error);
+        setCellOutputs(prev => ({
+          ...prev,
+          [cell.id]: {
+            status: 'error',
+            output: error.message
+          }
+        }));
+      }
+    }
+    
+    setRunningCell(null);
+    setKernelStatus('idle');
+  };
+  
+  const deleteCell = (id) => {
+    const cellIndex = cells.findIndex(cell => cell.id === id);
+    if (cellIndex === -1) return;
+    
+    const newCells = cells.filter(cell => cell.id !== id);
+    setCells(newCells);
+    
+    // Set active cell to the previous cell or the next cell if available
+    if (newCells.length > 0) {
+      if (cellIndex > 0) {
+        setActiveCell(newCells[cellIndex - 1].id);
+      } else {
+        setActiveCell(newCells[0].id);
+      }
+    } else {
+      setActiveCell(null);
+    }
+  };
+  
+  const moveCellUp = (id) => {
+    const cellIndex = cells.findIndex(cell => cell.id === id);
+    if (cellIndex <= 0) return;
+    
+    const newCells = [...cells];
+    const temp = newCells[cellIndex];
+    newCells[cellIndex] = newCells[cellIndex - 1];
+    newCells[cellIndex - 1] = temp;
+    
+    setCells(newCells);
+  };
+  
+  const moveCellDown = (id) => {
+    const cellIndex = cells.findIndex(cell => cell.id === id);
+    if (cellIndex === -1 || cellIndex >= cells.length - 1) return;
+    
+    const newCells = [...cells];
+    const temp = newCells[cellIndex];
+    newCells[cellIndex] = newCells[cellIndex + 1];
+    newCells[cellIndex + 1] = temp;
+    
+    setCells(newCells);
+  };
+  
+  const restartKernel = async () => {
+    if (!activeKernel) return;
+    
+    setKernelStatus('offline');
+    const success = await kernelService.restartKernel();
+    if (success) {
+      // Clear all outputs
+      const clearedOutputs = {};
+      cells.forEach(cell => {
+        clearedOutputs[cell.id] = null;
+      });
+      setCellOutputs(clearedOutputs);
+      setKernelStatus('idle');
+    } else {
+      console.error('Failed to restart kernel');
+    }
+  };
+  
+  const interruptKernel = async () => {
+    if (!activeKernel || !runningCell) return;
+    
+    const success = await kernelService.interruptKernel();
+    if (success) {
+      setRunningCell(null);
+      setKernelStatus('idle');
     }
   };
   
   if (!notebook) {
-    return <div>No notebook selected</div>;
+    return <div className="jp-notebook-panel">No notebook selected</div>;
   }
   
   return (
-    <NotebookContainer>
-      <NotebookTitle>{notebook.name}</NotebookTitle>
-      
-      {/* Add Kernel Selector */}
-      <KernelSelector onKernelChange={handleKernelChange} />
-      
-      <ButtonGroup>
-        <Button onClick={() => addCell('code')}>Add Code Cell</Button>
-        <Button onClick={() => addCell('markdown')}>Add Markdown Cell</Button>
-        <Button 
-          onClick={runCell} 
-          disabled={!activeCell || !activeKernel || runningCell !== null}
-        >
-          {runningCell === activeCell ? 'Running...' : 'Run Cell'}
-        </Button>
-      </ButtonGroup>
-      
-      {cells.map(cell => (
-        <div id={`cell-${cell.id}`} key={cell.id}>
-          <Cell
-            id={cell.id}
-            type={cell.type}
-            content={cell.content}
-            isActive={activeCell === cell.id}
-            onChange={handleCellChange}
-            onFocus={handleCellFocus}
-            output={cellOutputs[cell.id]}
-          />
+    <div className="jp-content-area">
+      <div className="jp-notebook-toolbar">
+        <h3 className="notebook-title">{notebook.name}</h3>
+        
+        <NotebookToolbar 
+          onAddCodeCell={() => addCell('code', '', 'after')}
+          onAddMarkdownCell={() => addCell('markdown', '', 'after')}
+          onRunCell={runCell}
+          onRunAll={runAllCells}
+          onInterrupt={interruptKernel}
+          onRestart={restartKernel}
+          isRunning={runningCell !== null}
+          hasActiveCell={activeCell !== null}
+          hasKernel={activeKernel !== null}
+        />
+        
+        <div className="jp-kernel-indicator">
+          <div className={`jp-kernel-status ${kernelStatus}`}></div>
+          <KernelSelector onKernelChange={handleKernelChange} />
         </div>
-      ))}
+      </div>
       
-      <AddCellButton onClick={() => addCell('code')}>+ Add Cell</AddCellButton>
-    </NotebookContainer>
+      <div className="jp-notebook-panel">
+        {cells.map(cell => (
+          <div id={`cell-${cell.id}`} key={cell.id} className="jp-cell">
+            <Cell
+              id={cell.id}
+              type={cell.type}
+              content={cell.content}
+              isActive={activeCell === cell.id}
+              isRunning={runningCell === cell.id}
+              onChange={handleCellChange}
+              onFocus={handleCellFocus}
+              output={cellOutputs[cell.id]}
+              onDelete={() => deleteCell(cell.id)}
+              onMoveUp={() => moveCellUp(cell.id)}
+              onMoveDown={() => moveCellDown(cell.id)}
+              onRun={() => {
+                setActiveCell(cell.id);
+                runCell();
+              }}
+            />
+          </div>
+        ))}
+        
+        <div className="jp-add-cell" onClick={() => addCell('code')}>
+          + Add Cell
+        </div>
+      </div>
+    </div>
   );
 };
 

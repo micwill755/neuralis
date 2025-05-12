@@ -15,6 +15,7 @@ const {
   getContainerLogs,
   createBuildScript
 } = require('./dockerService');
+const kernelsRouter = require('./routes/kernels');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -167,6 +168,23 @@ app.post('/api/scripts/build', async (req, res) => {
     res.json({ success: true, scriptPath });
   } catch (error) {
     console.error('Error creating build script:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Use kernel routes
+app.use('/api/kernels', kernelsRouter);
+
+// Add endpoint to list active terminals
+app.get('/api/terminals', (req, res) => {
+  try {
+    // This would normally query the terminal server
+    // For now, we'll return a mock list
+    res.json([
+      { name: 'bash-1', type: 'bash' },
+      { name: 'python-1', type: 'python' }
+    ]);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
