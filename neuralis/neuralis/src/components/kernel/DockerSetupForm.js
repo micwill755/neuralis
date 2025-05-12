@@ -1,112 +1,115 @@
 import React, { useState } from 'react';
 import kernelService from '../../services/kernelService';
+import './KernelSetup.css';
 
-function DockerSetupForm({ onComplete, onBack, setIsLoading, setError }) {
-  const [formData, setFormData] = useState({
-    pythonVersion: '3.12',
-    packages: 'numpy,pandas,matplotlib,scikit-learn',
-    port: '8888',
-    mountPath: '~/neuralis-notebooks'
-  });
-  
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+const DockerSetupForm = ({ onContainerCreated }) => {
+  const [pythonVersion, setPythonVersion] = useState('3.9');
+  const [port, setPort] = useState('8888');
+  const [containerName, setContainerName] = useState('');
+  const [packages, setPackages] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Show loading indicator
     setIsLoading(true);
+    setError(null);
     
     try {
-      // Generate Docker files and start container
-      const containerInfo = await kernelService.setupDockerContainer(formData);
+      // Generate a container name if not provided
+      const name = containerName || `neuralis-kernel-${pythonVersion}-${Date.now()}`;
       
-      // Create kernel configuration
-      const config = {
-        type: 'docker',
-        pythonVersion: formData.pythonVersion,
-        host: 'localhost',
-        port: formData.port,
-        mountPath: formData.mountPath,
-        packages: formData.packages.split(',').map(pkg => pkg.trim()),
-        timestamp: new Date().toISOString(),
-        containerInfo
-      };
+      // Build the container
+      const result = await kernelService.setupDockerContainer({
+        pythonVersion,
+        port: parseInt(port),
+        name,
+        packages
+      });
       
-      onComplete(config);
-    } catch (error) {
-      setError(error.message || 'Failed to set up Docker container');
+      if (result) {
+        // Reset form
+        setContainerName('');
+        setPackages('');
+        
+        // Notify parent component
+        if (onContainerCreated) {
+          onContainerCreated(result);
+        }
+      } else {
+        setError('Failed to create kernel container');
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
   
   return (
-    <form onSubmit={handleSubmit} className="setup-form">
-      <button type="button" onClick={onBack} className="back-button">
-        ← Back
-      </button>
+    <div className="docker-setup-form">
+      <h3>Create Docker Kernel</h3>
       
-      <h3>Configure Docker Container</h3>
-      
-      <div className="form-group">
-        <label>Python Version</label>
-        <select 
-          name="pythonVersion" 
-          value={formData.pythonVersion}
-          onChange={handleChange}
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="pythonVersion">Python Version:</label>
+          <select 
+            id="pythonVersion" 
+            value={pythonVersion} 
+            onChange={(e) => setPythonVersion(e.target.value)}
+          >
+            <option value="3.7">Python 3.7</option>
+            <option value="3.8">Python 3.8</option>
+            <option value="3.9">Python 3.9</option>
+            <option value="3.10">Python 3.10</option>
+          </select>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="port">Port:</label>
+          <input 
+            type="text" 
+            id="port" 
+            value={port} 
+            onChange={(e) => setPort(e.target.value)}
+            placeholder="8888"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="containerName">Container Name (optional):</label>
+          <input 
+            type="text" 
+            id="containerName" 
+            value={containerName} 
+            onChange={(e) => setContainerName(e.target.value)}
+            placeholder="neuralis-kernel-3.9"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="packages">Additional Packages (comma separated):</label>
+          <input 
+            type="text" 
+            id="packages" 
+            value={packages} 
+            onChange={(e) => setPackages(e.target.value)}
+            placeholder="pandas,matplotlib,scikit-learn"
+          />
+        </div>
+        
+        <button 
+          type="submit" 
+          className="build-button"
+          disabled={isLoading}
         >
-          <option value="3.12">Python 3.12</option>
-          <option value="3.11">Python 3.11</option>
-          <option value="3.10">Python 3.10</option>
-          <option value="3.9">Python 3.9</option>
-        </select>
-      </div>
+          {isLoading ? 'Building...' : 'Build Kernel'}
+        </button>
+      </form>
       
-      <div className="form-group">
-        <label>Packages (comma-separated)</label>
-        <input 
-          type="text" 
-          name="packages" 
-          value={formData.packages}
-          onChange={handleChange}
-        />
-        <small className="form-help">Common packages: numpy, pandas, matplotlib, scikit-learn, tensorflow, pytorch</small>
-      </div>
-      
-      <div className="form-group">
-        <label>Port</label>
-        <input 
-          type="text" 
-          name="port" 
-          value={formData.port}
-          onChange={handleChange}
-          pattern="[0-9]+"
-          title="Please enter a valid port number"
-        />
-      </div>
-      
-      <div className="form-group">
-        <label>Notebook Mount Path</label>
-        <input 
-          type="text" 
-          name="mountPath" 
-          value={formData.mountPath}
-          onChange={handleChange}
-        />
-        <small className="form-help">Local path where notebook files will be stored</small>
-      </div>
-      
-      <button type="submit" className="setup-button">
-        Create Docker Container
-      </button>
-    </form>
+      {error && <div className="error-message">{error}</div>}
+    </div>
   );
-}
+};
 
 export default DockerSetupForm;

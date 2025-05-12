@@ -1,10 +1,13 @@
 /**
  * Service for managing connections to Python kernels running in Docker containers
+ * Implementation based on KERNEL_SETUP.md requirements
  */
+
+import kernelManager from './kernelManager';
 
 class KernelService {
   constructor() {
-    this.baseUrl = 'http://localhost:8888';
+    this.baseUrl = 'http://localhost:8888'; // Default port, will be updated per container
     this.activeKernel = null;
     this.availableKernels = [];
     this.executionCallbacks = {};
@@ -18,53 +21,34 @@ class KernelService {
     try {
       console.log('Setting up Docker container with config:', config);
       
+      // Initialize kernel manager if needed
+      const isInitialized = await kernelManager.initialize();
+      if (!isInitialized) {
+        throw new Error('Failed to initialize kernel manager. Is Docker installed?');
+      }
+      
       // Create a unique container name
-      const containerName = `neuralis-python-${config.pythonVersion}-${Date.now()}`;
+      const containerName = `neuralis-kernel-${config.pythonVersion}-${Date.now()}`;
       
-      // Create a Dockerfile
-      const dockerfile = `
-FROM python:${config.pythonVersion}-slim
-
-WORKDIR /app
-
-# Install Jupyter and other packages
-RUN pip install --no-cache-dir jupyter ${config.packages.split(',').join(' ')}
-
-# Expose the Jupyter port
-EXPOSE ${config.port}
-
-# Create a non-root user to run Jupyter
-RUN useradd -m jupyter
-USER jupyter
-
-# Set up Jupyter notebook configuration
-RUN mkdir -p /home/jupyter/.jupyter
-RUN echo "c.NotebookApp.token = ''" > /home/jupyter/.jupyter/jupyter_notebook_config.py
-RUN echo "c.NotebookApp.password = ''" >> /home/jupyter/.jupyter/jupyter_notebook_config.py
-RUN echo "c.NotebookApp.allow_origin = '*'" >> /home/jupyter/.jupyter/jupyter_notebook_config.py
-RUN echo "c.NotebookApp.ip = '0.0.0.0'" >> /home/jupyter/.jupyter/jupyter_notebook_config.py
-
-# Set the working directory to the mounted volume
-WORKDIR /notebooks
-
-# Start Jupyter notebook
-CMD ["jupyter", "notebook", "--no-browser"]
-`;
-
-      // For demonstration purposes, we'll simulate the Docker container creation
-      console.log('Creating Docker container:', containerName);
-      console.log('Dockerfile:', dockerfile);
+      // Build the container using kernelManager
+      const result = await kernelManager.buildKernelContainer({
+        pythonVersion: config.pythonVersion,
+        port: config.port || 8888,
+        name: containerName,
+        packages: config.packages || ''
+      });
       
-      // Simulate Docker build and run process
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!result.success) {
+        throw new Error(`Failed to build container: ${result.error}`);
+      }
       
       // Add the container to our list
       const containerInfo = {
-        id: `container_${Date.now()}`,
+        id: containerName,
         name: containerName,
         pythonVersion: config.pythonVersion,
-        port: config.port,
-        mountPath: config.mountPath,
+        port: config.port || 8888,
+        url: `http://localhost:${config.port || 8888}`,
         status: 'running',
         createdAt: new Date().toISOString()
       };
@@ -78,7 +62,8 @@ CMD ["jupyter", "notebook", "--no-browser"]
         displayName: `Python ${config.pythonVersion} (Docker: ${containerName})`,
         language: 'python',
         isRunning: true,
-        containerId: containerInfo.id
+        containerId: containerInfo.id,
+        baseUrl: containerInfo.url
       };
       
       this.availableKernels.push(kernelInfo);
@@ -99,12 +84,41 @@ CMD ["jupyter", "notebook", "--no-browser"]
     try {
       console.log('Initializing kernel service...');
       
-      // Simulate successful initialization
-      console.log('Kernel service initialized successfully');
+      // Initialize kernel manager to check Docker availability
+      const isManagerInitialized = await kernelManager.initialize();
+      if (!isManagerInitialized) {
+        console.warn('Docker is not available. Some features may be limited.');
+      }
+      
+      // List existing Docker containers
+      if (isManagerInitialized) {
+        const containers = await kernelManager.listContainers();
+        this.dockerContainers = containers;
+        
+        // Create kernel entries for existing containers
+        containers.forEach(container => {
+          // Extract Python version from container name
+          const versionMatch = container.name.match(/neuralis-kernel-(\d+\.\d+)/);
+          const pythonVersion = versionMatch ? versionMatch[1] : '3.9';
+          
+          const kernelInfo = {
+            id: `kernel_${container.name}`,
+            name: `python${pythonVersion.replace('.', '')}`,
+            displayName: `Python ${pythonVersion} (Docker: ${container.name})`,
+            language: 'python',
+            isRunning: true,
+            containerId: container.name,
+            baseUrl: container.url
+          };
+          
+          this.availableKernels.push(kernelInfo);
+        });
+      }
       
       // Get available kernels
       await this.listKernels();
       
+      console.log('Kernel service initialized successfully');
       return true;
     } catch (error) {
       console.error('Error initializing kernel service:', error);
@@ -125,46 +139,79 @@ CMD ["jupyter", "notebook", "--no-browser"]
         return this.availableKernels;
       }
       
-      // If no cached kernels, try to get from server
+      // If no cached kernels, try to get from Docker containers
       try {
-        // Get kernelspecs (available kernel types)
-        const specsResponse = await fetch(`${this.baseUrl}/api/kernelspecs`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-          mode: 'cors',
-        });
-        
-        if (!specsResponse.ok) {
-          console.error('Failed to fetch kernelspecs:', await specsResponse.text());
-          throw new Error('Failed to fetch kernelspecs');
+        // Initialize kernel manager if needed
+        const isInitialized = await kernelManager.initialize();
+        if (isInitialized) {
+          const containers = await kernelManager.listContainers();
+          this.dockerContainers = containers;
+          
+          // Create kernel entries for existing containers
+          containers.forEach(container => {
+            // Extract Python version from container name
+            const versionMatch = container.name.match(/neuralis-kernel-(\d+\.\d+)/);
+            const pythonVersion = versionMatch ? versionMatch[1] : '3.9';
+            
+            const kernelInfo = {
+              id: `kernel_${container.name}`,
+              name: `python${pythonVersion.replace('.', '')}`,
+              displayName: `Python ${pythonVersion} (Docker: ${container.name})`,
+              language: 'python',
+              isRunning: true,
+              containerId: container.name,
+              baseUrl: container.url
+            };
+            
+            this.availableKernels.push(kernelInfo);
+          });
         }
-        
-        const specsData = await specsResponse.json();
-        console.log('Available kernelspecs:', specsData);
-        
-        // Format kernel information
-        this.availableKernels = Object.entries(specsData.kernelspecs).map(([id, spec]) => ({
-          id,
-          name: spec.name,
-          displayName: spec.spec.display_name,
-          language: spec.spec.language,
-          isRunning: false,
-        }));
-        
-        console.log('Formatted kernels:', this.availableKernels);
       } catch (error) {
-        console.warn('Error fetching kernels from server:', error);
-        // If server fetch fails, create a dummy kernel for testing
-        if (this.availableKernels.length === 0) {
-          this.availableKernels = [{
-            id: 'dummy_kernel',
-            name: 'python3',
-            displayName: 'Python 3 (Default)',
-            language: 'python',
-            isRunning: false
-          }];
+        console.warn('Error fetching Docker containers:', error);
+      }
+      
+      // If still no kernels, try to get from server
+      if (this.availableKernels.length === 0) {
+        try {
+          // Get kernelspecs (available kernel types)
+          const specsResponse = await fetch(`${this.baseUrl}/api/kernelspecs`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            mode: 'cors',
+          });
+          
+          if (!specsResponse.ok) {
+            console.error('Failed to fetch kernelspecs:', await specsResponse.text());
+            throw new Error('Failed to fetch kernelspecs');
+          }
+          
+          const specsData = await specsResponse.json();
+          console.log('Available kernelspecs:', specsData);
+          
+          // Format kernel information
+          this.availableKernels = Object.entries(specsData.kernelspecs).map(([id, spec]) => ({
+            id,
+            name: spec.name,
+            displayName: spec.spec.display_name,
+            language: spec.spec.language,
+            isRunning: false,
+          }));
+          
+          console.log('Formatted kernels:', this.availableKernels);
+        } catch (error) {
+          console.warn('Error fetching kernels from server:', error);
+          // If server fetch fails, create a dummy kernel for testing
+          if (this.availableKernels.length === 0) {
+            this.availableKernels = [{
+              id: 'dummy_kernel',
+              name: 'python3',
+              displayName: 'Python 3 (Default)',
+              language: 'python',
+              isRunning: false
+            }];
+          }
         }
       }
       
@@ -182,18 +229,28 @@ CMD ["jupyter", "notebook", "--no-browser"]
     try {
       console.log('Starting kernel:', kernelName);
       
-      // First, check if we're using a simulated Docker kernel
+      // First, check if we're using a Docker kernel
       const kernelInfo = this.availableKernels.find(k => k.name === kernelName);
       if (!kernelInfo) {
         throw new Error(`Kernel ${kernelName} not found`);
       }
       
-      // If this is a Docker kernel, we can directly use it
+      // If this is a Docker kernel, we need to use its specific URL
       if (kernelInfo.containerId) {
+        // Find the container
+        const container = this.dockerContainers.find(c => c.name === kernelInfo.containerId);
+        if (container) {
+          // Update the base URL to point to this container
+          this.baseUrl = container.url;
+          console.log(`Using Docker container URL: ${this.baseUrl}`);
+        }
+        
         this.activeKernel = {
           id: kernelInfo.id,
           name: kernelInfo.name,
-          displayName: kernelInfo.displayName
+          displayName: kernelInfo.displayName,
+          containerId: kernelInfo.containerId,
+          baseUrl: this.baseUrl
         };
         
         console.log('Docker kernel started:', this.activeKernel);
@@ -224,7 +281,8 @@ CMD ["jupyter", "notebook", "--no-browser"]
         this.activeKernel = {
           id: data.id,
           name: kernelName,
-          displayName: kernelInfo.displayName
+          displayName: kernelInfo.displayName,
+          baseUrl: this.baseUrl
         };
         
         // Set up WebSocket connection for this kernel
@@ -267,7 +325,9 @@ CMD ["jupyter", "notebook", "--no-browser"]
     try {
       // Create a WebSocket connection to the kernel
       const kernelId = this.activeKernel.id;
-      const wsUrl = `ws://localhost:8888/api/kernels/${kernelId}/channels`;
+      // Use the baseUrl from the active kernel if available
+      const baseUrl = this.activeKernel.baseUrl || this.baseUrl;
+      const wsUrl = baseUrl.replace('http://', 'ws://') + `/api/kernels/${kernelId}/channels`;
       
       console.log(`Setting up WebSocket connection to: ${wsUrl}`);
       
@@ -477,9 +537,12 @@ CMD ["jupyter", "notebook", "--no-browser"]
       // This can be done via the Jupyter API
       const kernelId = this.activeKernel.id;
       
+      // Use the baseUrl from the active kernel if available
+      const baseUrl = this.activeKernel.baseUrl || this.baseUrl;
+      
       // Create a session if needed
       if (!this.sessionId) {
-        const sessionResponse = await fetch(`${this.baseUrl}/api/sessions`, {
+        const sessionResponse = await fetch(`${baseUrl}/api/sessions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -501,7 +564,7 @@ CMD ["jupyter", "notebook", "--no-browser"]
       }
       
       // Execute the code
-      const executeResponse = await fetch(`${this.baseUrl}/api/kernels/${kernelId}/execute`, {
+      const executeResponse = await fetch(`${baseUrl}/api/kernels/${kernelId}/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -681,10 +744,18 @@ CMD ["jupyter", "notebook", "--no-browser"]
     if (!this.activeKernel) return false;
     
     try {
-      console.log('Simulating kernel restart for:', this.activeKernel.name);
+      console.log('Restarting kernel:', this.activeKernel.name);
       
-      // Simulate a short delay for restart
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // If this is a Docker kernel, use the kernelManager to restart it
+      if (this.activeKernel.containerId) {
+        const result = await kernelManager.restartContainer(this.activeKernel.containerId);
+        if (!result) {
+          throw new Error('Failed to restart Docker container');
+        }
+      } else {
+        // Simulate a short delay for restart
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
       // Re-setup the WebSocket connection
       this.setupWebSocket();
