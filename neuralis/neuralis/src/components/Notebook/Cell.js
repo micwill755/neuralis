@@ -67,6 +67,7 @@ const Cell = ({
       const container = editor.getDomNode().parentElement;
       if (container) {
         container.style.height = `${contentHeight}px`;
+        container.style.overflow = 'visible';
       }
       
       // Force editor to update layout
@@ -95,10 +96,10 @@ const Cell = ({
       </div>
       
       <div className="jp-cell-input">
-        <div className="jp-cell-editor">
+        <div className="jp-cell-editor" style={{ minHeight: '24px', height: 'auto', overflow: 'visible' }}>
           {type === 'code' ? (
             <MonacoEditor
-              height="100px"
+              height="auto"
               language="python"
               value={content}
               onChange={handleEditorChange}
@@ -112,6 +113,7 @@ const Cell = ({
                 lineDecorationsWidth: 0,
                 lineNumbersMinChars: 0,
                 automaticLayout: true,
+                wordWrap: 'on',
                 scrollbar: {
                   vertical: 'auto',
                   horizontal: 'auto'
@@ -121,7 +123,7 @@ const Cell = ({
           ) : (
             isActive ? (
               <MonacoEditor
-                height="100px"
+                height="auto"
                 language="markdown"
                 value={content}
                 onChange={handleEditorChange}
@@ -185,8 +187,8 @@ const Cell = ({
       
       {/* Display cell output if available */}
       {type === 'code' && output && (
-        <div className={`jp-cell-output ${output.status === 'error' ? 'jp-cell-output-error' : ''}`}>
-          <div className="jp-cell-output-text">
+        <div className={`jp-cell-output ${output.status === 'error' ? 'jp-cell-output-error' : ''}`} style={{ maxHeight: 'none', overflowY: 'visible' }}>
+          <div className="jp-cell-output-text" style={{ whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
             {cleanedOutput}
           </div>
           
@@ -196,6 +198,7 @@ const Cell = ({
               className="output-image"
               src={`data:${output.imageData.type};base64,${output.imageData.data}`} 
               alt="Output visualization" 
+              style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
             />
           )}
           
@@ -204,6 +207,7 @@ const Cell = ({
             <div 
               className="html-output"
               dangerouslySetInnerHTML={{ __html: cleanedOutput }} 
+              style={{ overflow: 'auto', maxHeight: 'none' }}
             />
           )}
         </div>

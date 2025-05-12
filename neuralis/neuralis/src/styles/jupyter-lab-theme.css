@@ -381,3 +381,41 @@
   align-items: center;
   margin-left: var(--jp-ui-spacing2);
 }
+/* Fix for cell output visibility */
+.jp-cell-output {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+
+/* Fix for cell editor height adjustment */
+.jp-cell-editor {
+  min-height: 24px;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Ensure Monaco editor container expands properly */
+.monaco-editor {
+  min-height: 24px !important;
+  height: auto !important;
+}
+
+/* Make sure the cell input area expands properly */
+.jp-cell-input {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Ensure output text is fully visible */
+.jp-cell-output-text {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: none !important;
+}
+
+/* Fix for image output */
+.output-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
