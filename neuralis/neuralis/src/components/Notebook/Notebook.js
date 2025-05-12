@@ -100,25 +100,28 @@ const Notebook = ({ notebook, onUpdateCells }) => {
     console.log('Kernel connected:', kernel);
   };
   
-  const runCell = async () => {
-    if (!activeCell || !activeKernel) {
+  const runCell = async (cellId = null) => {
+    // If cellId is provided, use it; otherwise use activeCell
+    const cellToRunId = cellId || activeCell;
+    
+    if (!cellToRunId || !activeKernel) {
       console.log('Cannot run cell: No active cell or kernel');
       return;
     }
     
-    const cellToRun = cells.find(cell => cell.id === activeCell);
+    const cellToRun = cells.find(cell => cell.id === cellToRunId);
     if (!cellToRun || cellToRun.type !== 'code') {
       console.log('Cannot run cell: Not a code cell');
       return;
     }
     
     try {
-      setRunningCell(activeCell);
+      setRunningCell(cellToRunId);
       
       // Clear previous output for this cell
       setCellOutputs(prev => ({
         ...prev,
-        [activeCell]: { status: 'running', output: '' }
+        [cellToRunId]: { status: 'running', output: '' }
       }));
       
       // Execute the code in the kernel
@@ -126,23 +129,24 @@ const Notebook = ({ notebook, onUpdateCells }) => {
         if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
           // Update the output for this cell
           setCellOutputs(prev => {
-            const currentOutput = prev[activeCell]?.output || '';
-            const currentImageData = prev[activeCell]?.imageData;
+            const currentOutput = prev[cellToRunId]?.output || '';
+            const currentImageData = prev[cellToRunId]?.imageData;
             
             return {
               ...prev,
-              [activeCell]: {
+              [cellToRunId]: {
                 status: 'success',
                 output: result.content ? currentOutput + result.content : currentOutput,
                 imageData: result.imageData || currentImageData,
-                executionCount: result.executionCount || prev[activeCell]?.executionCount
+                executionCount: result.executionCount || prev[cellToRunId]?.executionCount,
+                contentType: result.contentType || prev[cellToRunId]?.contentType
               }
             };
           });
         } else if (result.type === 'error') {
           setCellOutputs(prev => ({
             ...prev,
-            [activeCell]: {
+            [cellToRunId]: {
               status: 'error',
               output: result.content
             }
@@ -156,7 +160,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
       console.error('Error running cell:', error);
       setCellOutputs(prev => ({
         ...prev,
-        [activeCell]: {
+        [cellToRunId]: {
           status: 'error',
           output: error.message
         }
@@ -219,7 +223,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
         <div className="button-group">
           <button 
             className={`notebook-button run-button ${(!activeCell || !activeKernel || runningCell !== null) ? 'disabled' : ''}`}
-            onClick={runCell} 
+            onClick={() => runCell()} 
             disabled={!activeCell || !activeKernel || runningCell !== null}
           >
             {runningCell === activeCell ? '⏳' : '▶'} {runningCell === activeCell ? 'Running...' : 'Run'}
@@ -241,6 +245,7 @@ const Notebook = ({ notebook, onUpdateCells }) => {
               onChange={handleCellChange}
               onFocus={handleCellFocus}
               output={cellOutputs[cell.id]}
+              onRunCell={runCell}
             />
             {index === cells.length - 1 && (
               <button className="add-cell-button" onClick={() => addCell('code')}>Add cell</button>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import './Notebook.css';
@@ -18,7 +18,9 @@ const cleanAnsiCodes = (text) => {
   }
 };
 
-const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
+const Cell = ({ id, type, content, isActive, onChange, onFocus, output, onRunCell }) => {
+  const editorRef = useRef(null);
+  
   const handleEditorChange = (value) => {
     onChange(id, value);
   };
@@ -26,8 +28,54 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
   // Clean output text from ANSI codes
   const cleanedOutput = output?.output ? cleanAnsiCodes(output.output) : '';
   
+  // Handle keyboard shortcuts
+  const handleKeyDown = (event) => {
+    // Check for Shift+Enter to run cell
+    if (event.key === 'Enter' && event.shiftKey && type === 'code') {
+      event.preventDefault();
+      onRunCell && onRunCell(id);
+    }
+  };
+  
+  // Function to handle editor mounting
+  const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current = editor;
+    
+    // Adjust editor height based on content
+    const updateEditorHeight = () => {
+      const lineCount = editor.getModel().getLineCount();
+      const lineHeight = 19; // Default line height in pixels
+      const minHeight = 100; // Minimum height
+      const paddingHeight = 10; // Additional padding
+      
+      // Calculate height based on content (number of lines)
+      const contentHeight = Math.max(minHeight, lineCount * lineHeight + paddingHeight);
+      
+      // Set the container height
+      const container = editor.getDomNode().parentElement;
+      if (container) {
+        container.style.height = `${contentHeight}px`;
+      }
+      
+      // Force editor to update layout
+      editor.layout();
+    };
+    
+    // Update height initially
+    updateEditorHeight();
+    
+    // Update height when content changes
+    editor.onDidChangeModelContent(() => {
+      updateEditorHeight();
+    });
+  };
+  
   return (
-    <div className={`cell-container ${isActive ? 'active' : ''}`} onClick={() => onFocus(id)}>
+    <div 
+      className={`cell-container ${isActive ? 'active' : ''}`} 
+      onClick={() => onFocus(id)}
+      onKeyDown={handleKeyDown}
+    >
       <div className="cell-prompt-area">
         <div className={`cell-prompt ${type === 'markdown' ? 'markdown' : ''}`}>
           {type === 'code' ? 
@@ -38,10 +86,11 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
           <div className="cell-content">
             {type === 'code' ? (
               <MonacoEditor
-                height="auto"
+                height="100px"
                 language="python"
                 value={content}
                 onChange={handleEditorChange}
+                onMount={handleEditorDidMount}
                 options={{
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
@@ -52,7 +101,7 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
                   lineNumbersMinChars: 0,
                   automaticLayout: true,
                   scrollbar: {
-                    vertical: 'hidden',
+                    vertical: 'auto',
                     horizontal: 'auto'
                   }
                 }}
@@ -60,10 +109,11 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
             ) : (
               isActive ? (
                 <MonacoEditor
-                  height="auto"
+                  height="100px"
                   language="markdown"
                   value={content}
                   onChange={handleEditorChange}
+                  onMount={handleEditorDidMount}
                   options={{
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
@@ -75,7 +125,7 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
                     lineNumbersMinChars: 0,
                     automaticLayout: true,
                     scrollbar: {
-                      vertical: 'hidden',
+                      vertical: 'auto',
                       horizontal: 'auto'
                     }
                   }}
@@ -101,6 +151,14 @@ const Cell = ({ id, type, content, isActive, onChange, onFocus, output }) => {
               className="output-image"
               src={`data:${output.imageData.type};base64,${output.imageData.data}`} 
               alt="Output visualization" 
+            />
+          )}
+          
+          {/* Display HTML content if available */}
+          {output.contentType === 'html' && (
+            <div 
+              className="html-output"
+              dangerouslySetInnerHTML={{ __html: cleanedOutput }} 
             />
           )}
         </div>
