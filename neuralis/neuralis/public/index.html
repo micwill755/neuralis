@@ -7,37 +7,92 @@
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="Neuralis - A Jupyter Lab Clone"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
-
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>Neuralis</title>
+    <title>Neuralis - Jupyter Lab Clone</title>
+    
+    <!-- Load Monaco Editor resources -->
+    <script src="%PUBLIC_URL%/monaco-editor/min/vs/loader.js"></script>
+    <script>
+      // Configure RequireJS for Monaco Editor
+      require.config({ paths: { 'vs': '%PUBLIC_URL%/monaco-editor/min/vs' }});
+      
+      // Load Python language support
+      require(['vs/editor/editor.main'], function() {
+        monaco.languages.register({ id: 'python' });
+        monaco.languages.setMonarchTokensProvider('python', {
+          defaultToken: '',
+          tokenPostfix: '.python',
+          keywords: [
+            'and', 'as', 'assert', 'break', 'class', 'continue', 'def',
+            'del', 'elif', 'else', 'except', 'exec', 'finally', 'for',
+            'from', 'global', 'if', 'import', 'in', 'is', 'lambda',
+            'not', 'or', 'pass', 'print', 'raise', 'return', 'self',
+            'try', 'while', 'with', 'yield', 'None', 'True', 'False'
+          ],
+          
+          operators: [
+            '+', '-', '*', '**', '/', '//', '%', '<<', '>>', '&', '|', '^', '~',
+            '<', '>', '<=', '>=', '==', '!=', '<>', '='
+          ],
+          
+          // we include these common regular expressions
+          symbols: /[=><!~?:&|+\-*\/\^%]+/,
+          escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+          
+          // The main tokenizer for our languages
+          tokenizer: {
+            root: [
+              [/[a-zA-Z_]\w*/, {
+                cases: {
+                  '@keywords': 'keyword',
+                  '@default': 'identifier'
+                }
+              }],
+              
+              // Strings
+              [/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-terminated string
+              [/'([^'\\]|\\.)*$/, 'string.invalid'],  // non-terminated string
+              [/"/, 'string', '@string_double'],
+              [/'/, 'string', '@string_single'],
+              
+              // Numbers
+              [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
+              [/0[xX][0-9a-fA-F]+/, 'number.hex'],
+              [/\d+/, 'number'],
+              
+              // Delimiter: after number because of .\d floats
+              [/[;,.]/, 'delimiter'],
+              
+              // Comments
+              [/#.*$/, 'comment'],
+              
+              // Whitespace
+              [/\s+/, 'white']
+            ],
+            
+            string_double: [
+              [/[^\\"]+/, 'string'],
+              [/@escapes/, 'string.escape'],
+              [/\\./, 'string.escape.invalid'],
+              [/"/, 'string', '@pop']
+            ],
+            
+            string_single: [
+              [/[^\\']+/, 'string'],
+              [/@escapes/, 'string.escape'],
+              [/\\./, 'string.escape.invalid'],
+              [/'/, 'string', '@pop']
+            ],
+          }
+        });
+      });
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>
