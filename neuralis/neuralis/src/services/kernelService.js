@@ -625,9 +625,62 @@ class KernelService {
           return msgId;
         }
         
-        // If WebSocket is not available, fall back to simulated execution
-        console.warn('Failed to execute code via API, falling back to simulation');
-        throw new Error('Failed to execute code');
+        // If WebSocket is not available, try the backend API
+        try {
+          const backendResponse = await fetch('http://localhost:3001/api/python/execute', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              code: code,
+              sessionId: this.sessionId || 'default'
+            })
+          });
+          
+          if (!backendResponse.ok) {
+            throw new Error('Backend execution failed');
+          }
+          
+          const result = await backendResponse.json();
+          
+          // Process the result
+          if (result.type === 'error') {
+            onOutput({
+              type: 'error',
+              content: result.content,
+              executionCount: result.executionCount || Math.floor(Math.random() * 100) + 1
+            });
+          } else {
+            // Handle text output
+            if (result.content) {
+              onOutput({
+                type: 'execute_result',
+                content: result.content,
+                executionCount: result.executionCount || Math.floor(Math.random() * 100) + 1
+              });
+            }
+            
+            // Handle image output
+            if (result.imageData) {
+              onOutput({
+                type: 'display_data',
+                imageData: {
+                  type: 'image/png',
+                  data: result.imageData
+                },
+                executionCount: result.executionCount || Math.floor(Math.random() * 100) + 1
+              });
+            }
+          }
+          
+          // Signal execution completion
+          onOutput({ type: 'execution_complete' });
+          return msgId;
+        } catch (backendError) {
+          console.error('Backend execution failed:', backendError);
+          throw backendError;
+        }
       }
       
       // Process the execution response
@@ -680,52 +733,10 @@ class KernelService {
     } catch (error) {
       console.error('Error executing code:', error);
       
-      // Fall back to simulated execution for development/testing
-      console.log('Falling back to simulated execution');
-      
-      // Parse the code to provide more realistic simulation
-      let simulatedOutput = '';
-      
-      // Check for common Python functions and provide appropriate output
-      if (code.includes('print(')) {
-        // Extract content inside print statements
-        const printMatches = code.match(/print\((.*?)\)/g);
-        if (printMatches) {
-          simulatedOutput = printMatches
-            .map(match => {
-              const content = match.substring(6, match.length - 1);
-              // Handle string literals
-              if (content.startsWith('"') || content.startsWith("'")) {
-                return content.substring(1, content.length - 1);
-              }
-              return `[Simulated: ${content}]`;
-            })
-            .join('\n');
-        }
-      } else if (code.includes('import matplotlib.pyplot')) {
-        // Simulate matplotlib output
-        simulatedOutput = '[Matplotlib figure would be displayed here]';
-        
-        // Provide a simulated image
-        onOutput({
-          type: 'display_data',
-          imageData: {
-            type: 'image/png',
-            data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' // 1x1 transparent pixel
-          },
-          executionCount: Math.floor(Math.random() * 100) + 1
-        });
-      } else if (code.includes('import pandas') || code.includes('pd.')) {
-        // Simulate pandas DataFrame output
-        simulatedOutput = '   Column1  Column2\n0        1        A\n1        2        B\n2        3        C';
-      } else {
-        // Generic simulation
-        simulatedOutput = `[Simulated output for: ${code.substring(0, 50)}${code.length > 50 ? '...' : ''}]`;
-      }
-      
+      // If all execution methods fail, notify the user
       onOutput({
-        type: 'execute_result',
-        content: simulatedOutput,
+        type: 'error',
+        content: `Failed to execute code: ${error.message}. Please check that the kernel is running properly.`,
         executionCount: Math.floor(Math.random() * 100) + 1
       });
       

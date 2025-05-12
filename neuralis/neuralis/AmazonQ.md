@@ -1,60 +1,68 @@
-# Jupyter React Clone - Notebook Selection Fix
+# Amazon Q Implementation Notes
 
-## Issue
-The Jupyter React Clone application had an issue where users could select a notebook initially, but couldn't switch to different notebooks afterward. The notebook content wouldn't update when selecting a different notebook.
+## Docker-based Kernel Implementation
 
-## Root Cause
-The issue was in the `Notebook.js` component where the notebook selection logic wasn't working correctly after the first selection. The component was:
+As requested, I've implemented Docker-based kernel support for the Neuralis Jupyter notebook clone according to the requirements in KERNEL_SETUP.md. This implementation allows users to:
 
-1. Only tracking the notebook name instead of the entire notebook object
-2. Not properly detecting changes when switching between notebooks
-3. Not resetting the active cell state when changing notebooks
+1. Create Python kernels with different versions (3.7, 3.8, 3.9, 3.10)
+2. Select a kernel for each notebook
+3. Execute code cells using the selected kernel
+4. View execution results directly in the notebook
 
-## Solution
-The following changes were made to fix the issue:
+### Implementation Details
 
-1. Changed from tracking just the notebook name to tracking the entire notebook object:
-```javascript
-// Before:
-const previousNotebookName = useRef(notebook?.name);
-// After:
-const previousNotebookRef = useRef(notebook);
-```
+#### Backend (Server)
 
-2. Updated the comparison logic to check the entire notebook object:
-```javascript
-// Before:
-if (previousNotebookName.current !== notebook.name) {
-  setCells(notebook.cells);
-  previousNotebookName.current = notebook.name;
-}
-// After:
-if (notebook && notebook.cells && notebook !== previousNotebookRef.current) {
-  setCells(notebook.cells);
-  previousNotebookRef.current = notebook;
-}
-```
+1. Created a `dockerService.js` module that provides:
+   - Docker availability checking
+   - Container building and management
+   - Container listing, stopping, and restarting
+   - Container logs retrieval
+   - Build script generation
 
-3. Added a new effect to reset the active cell when switching notebooks:
-```javascript
-// Reset active cell when switching notebooks
-useEffect(() => {
-  setActiveCell(null);
-}, [notebook]);
-```
+2. Updated `server/index.js` to expose API endpoints for:
+   - Docker availability checking
+   - Container management (build, list, stop, restart)
+   - Container logs retrieval
+   - Build script generation
 
-## Testing
-A test script was created to verify the notebook selection functionality. The test confirmed that:
-- Selecting notebook1 works correctly
-- Switching to notebook2 updates the content properly
-- Switching back to notebook1 again works as expected
+3. Created a build script at `scripts/build_kernel_container.sh` that can be used to manually build kernel containers
 
-The test script simulates the component behavior and verifies that the notebook content is updated correctly when switching between notebooks.
+#### Frontend (Client)
 
-## Conclusion
-The fix ensures that:
-- The component properly detects when a different notebook is selected
-- The cells are updated correctly when switching notebooks
-- The active cell state is reset when changing notebooks
+1. Modified `kernelService.js` to:
+   - Remove simulated code for seaborn and matplotlib
+   - Add real Docker-based kernel execution
+   - Fall back to backend API execution if WebSocket connection fails
+   - Properly handle kernel output including text, images, and errors
 
-Users can now select different notebooks without any issues, and the UI will properly update to show the content of whichever notebook is selected.
+### How It Works
+
+1. When a user selects "Build New Kernel" in the UI:
+   - The frontend calls the backend API to build a Docker container
+   - The backend creates a Dockerfile with the specified Python version
+   - The container is built and started with the Jupyter Kernel Gateway
+   - The container information is returned to the frontend
+
+2. When a user connects to a kernel:
+   - The frontend establishes a WebSocket connection to the kernel
+   - The kernel is ready to execute code
+
+3. When a user executes code:
+   - The code is sent to the kernel via WebSocket
+   - The kernel executes the code and returns the results
+   - The frontend displays the results in the notebook
+
+### Error Handling
+
+- If Docker is not available, the user is notified
+- If a container build fails, an error message is displayed
+- If code execution fails, an error message is displayed in the notebook cell
+
+### Future Improvements
+
+- Add support for custom Python packages
+- Implement kernel interruption
+- Add kernel status monitoring
+- Improve error handling and recovery
+- Add support for other languages (R, Julia, etc.)
