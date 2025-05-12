@@ -1,14 +1,13 @@
 /**
- * Service for managing Docker-based Python kernels
- * Implementation based on KERNEL_SETUP.md requirements
- * Uses backend API instead of direct child_process calls
+ * Client-side service for managing Docker-based Python kernels
+ * This service communicates with the backend API instead of using Node.js modules directly
  */
 
 class KernelManager {
   constructor() {
+    this.apiUrl = '/api';
     this.containers = [];
     this.initialized = false;
-    this.apiBaseUrl = 'http://localhost:3001/api';
   }
 
   /**
@@ -18,20 +17,14 @@ class KernelManager {
     if (this.initialized) return true;
     
     try {
-      // Check if Docker is available via API
-      const response = await fetch(`${this.apiBaseUrl}/docker/check`);
+      // Check if Docker is available via the backend API
+      const response = await fetch(`${this.apiUrl}/docker/check`);
       const data = await response.json();
       
       this.initialized = data.available;
-      
-      if (this.initialized) {
-        // List existing containers
-        await this.listContainers();
-      }
-      
-      return this.initialized;
+      return data.available;
     } catch (error) {
-      console.error('Error checking Docker availability:', error);
+      console.error('Docker is not available:', error);
       return false;
     }
   }
@@ -40,52 +33,23 @@ class KernelManager {
    * Build a Python kernel container
    */
   async buildKernelContainer(options = {}) {
-    const {
-      pythonVersion = '3.9',
-      port = 8888,
-      name = `neuralis-kernel-${pythonVersion}`,
-      packages = ''
-    } = options;
-    
     try {
-      const response = await fetch(`${this.apiBaseUrl}/containers`, {
+      const response = await fetch(`${this.apiUrl}/containers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          pythonVersion,
-          port,
-          name,
-          packages
-        })
+        body: JSON.stringify(options),
       });
       
       const result = await response.json();
       
-      if (result.success) {
+      if (result.success && result.container) {
         // Add container to the list
-        const container = {
-          name,
-          pythonVersion,
-          port,
-          url: `http://localhost:${port}`,
-          status: 'running'
-        };
-        
-        this.containers.push(container);
-        
-        return {
-          success: true,
-          container,
-          output: result.output
-        };
-      } else {
-        return {
-          success: false,
-          error: result.error
-        };
+        this.containers.push(result.container);
       }
+      
+      return result;
     } catch (error) {
       console.error('Failed to build kernel container:', error);
       return {
@@ -100,11 +64,11 @@ class KernelManager {
    */
   async listContainers() {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/containers`);
-      const containers = await response.json();
+      const response = await fetch(`${this.apiUrl}/containers`);
+      const data = await response.json();
       
-      this.containers = containers;
-      return containers;
+      this.containers = data;
+      return data;
     } catch (error) {
       console.error('Failed to list containers:', error);
       return [];
@@ -116,8 +80,8 @@ class KernelManager {
    */
   async stopContainer(name) {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/containers/${name}`, {
-        method: 'DELETE'
+      const response = await fetch(`${this.apiUrl}/containers/${name}`, {
+        method: 'DELETE',
       });
       
       const result = await response.json();
@@ -131,47 +95,6 @@ class KernelManager {
     } catch (error) {
       console.error(`Failed to stop container ${name}:`, error);
       return false;
-    }
-  }
-
-  /**
-   * Restart a kernel container
-   */
-  async restartContainer(name) {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/containers/${name}/restart`, {
-        method: 'POST'
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Update container status
-        const container = this.containers.find(c => c.name === name);
-        if (container) {
-          container.status = 'running';
-        }
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error(`Failed to restart container ${name}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Get logs from a kernel container
-   */
-  async getContainerLogs(name) {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/containers/${name}/logs`);
-      const data = await response.json();
-      
-      return data.logs || '';
-    } catch (error) {
-      console.error(`Failed to get logs for container ${name}:`, error);
-      return '';
     }
   }
 }
