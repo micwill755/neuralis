@@ -124,38 +124,19 @@ const Notebook = ({ notebook, onUpdateCells }) => {
         [cellToRunId]: { status: 'running', output: '' }
       }));
       
-      // Execute the code in the kernel
-      await kernelService.executeCode(cellToRun.content, (result) => {
-        if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
-          // Update the output for this cell
-          setCellOutputs(prev => {
-            const currentOutput = prev[cellToRunId]?.output || '';
-            const currentImageData = prev[cellToRunId]?.imageData;
-            
-            return {
-              ...prev,
-              [cellToRunId]: {
-                status: 'success',
-                output: result.content ? currentOutput + result.content : currentOutput,
-                imageData: result.imageData || currentImageData,
-                executionCount: result.executionCount || prev[cellToRunId]?.executionCount,
-                contentType: result.contentType || prev[cellToRunId]?.contentType
-              }
-            };
-          });
-        } else if (result.type === 'error') {
-          setCellOutputs(prev => ({
-            ...prev,
-            [cellToRunId]: {
-              status: 'error',
-              output: result.content
-            }
-          }));
-          setRunningCell(null);
-        } else if (result.type === 'execution_complete') {
-          setRunningCell(null);
-        }
-      });
+      // Execute the code in the appropriate kernel service based on the kernel type
+      if (activeKernel.serviceType === 'direct') {
+        // Use direct Python service
+        const directPythonService = require('../../services/directPythonService').default;
+        await directPythonService.executeCode(cellToRun.content, (result) => {
+          handleCellOutput(cellToRunId, result);
+        });
+      } else {
+        // Use Jupyter kernel service (default)
+        await kernelService.executeCode(cellToRun.content, (result) => {
+          handleCellOutput(cellToRunId, result);
+        });
+      }
     } catch (error) {
       console.error('Error running cell:', error);
       setCellOutputs(prev => ({
@@ -165,6 +146,39 @@ const Notebook = ({ notebook, onUpdateCells }) => {
           output: error.message
         }
       }));
+      setRunningCell(null);
+    }
+  };
+  
+  // Handle cell output from kernel execution
+  const handleCellOutput = (cellId, result) => {
+    if (result.type === 'execute_result' || result.type === 'stream' || result.type === 'display_data') {
+      // Update the output for this cell
+      setCellOutputs(prev => {
+        const currentOutput = prev[cellId]?.output || '';
+        const currentImageData = prev[cellId]?.imageData;
+        
+        return {
+          ...prev,
+          [cellId]: {
+            status: 'success',
+            output: result.content ? currentOutput + result.content : currentOutput,
+            imageData: result.imageData || currentImageData,
+            executionCount: result.executionCount || prev[cellId]?.executionCount,
+            contentType: result.contentType || prev[cellId]?.contentType
+          }
+        };
+      });
+    } else if (result.type === 'error') {
+      setCellOutputs(prev => ({
+        ...prev,
+        [cellId]: {
+          status: 'error',
+          output: result.content
+        }
+      }));
+      setRunningCell(null);
+    } else if (result.type === 'execution_complete') {
       setRunningCell(null);
     }
   };

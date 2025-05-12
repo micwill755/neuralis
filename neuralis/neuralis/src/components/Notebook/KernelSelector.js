@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import kernelService from '../../services/kernelService';
+import directPythonService from '../../services/directPythonService';
 import './Notebook.css';
 
 const KernelSelector = ({ onKernelChange }) => {
@@ -8,30 +9,53 @@ const KernelSelector = ({ onKernelChange }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [kernelType, setKernelType] = useState('jupyter'); // 'jupyter' or 'direct'
 
   // Initialize and fetch available kernels
   useEffect(() => {
-    const initKernelService = async () => {
+    const initKernelServices = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        console.log('Initializing kernel service...');
-        const initialized = await kernelService.initialize();
+        console.log('Initializing kernel services...');
         
-        if (initialized) {
-          console.log('Kernel service initialized, fetching kernels...');
-          const availableKernels = await kernelService.listKernels();
-          console.log('Available kernels:', availableKernels);
+        // Initialize both kernel services
+        const jupyterInitialized = await kernelService.initialize();
+        const directInitialized = await directPythonService.initialize();
+        
+        if (jupyterInitialized || directInitialized) {
+          console.log('Kernel services initialized, fetching kernels...');
           
-          setKernels(availableKernels);
+          // Get kernels from both services
+          const availableJupyterKernels = jupyterInitialized ? await kernelService.listKernels() : [];
+          const availableDirectKernels = directInitialized ? await directPythonService.listPythonEnvironments() : [];
+          
+          // Add source information to each kernel
+          const jupyterKernelsWithSource = availableJupyterKernels.map(kernel => ({
+            ...kernel,
+            source: 'jupyter',
+            displayName: `Jupyter: ${kernel.displayName}`
+          }));
+          
+          const directKernelsWithSource = availableDirectKernels.map(kernel => ({
+            ...kernel,
+            source: 'direct'
+          }));
+          
+          // Combine kernels from both sources
+          const allKernels = [...jupyterKernelsWithSource, ...directKernelsWithSource];
+          console.log('Available kernels:', allKernels);
+          
+          setKernels(allKernels);
           
           // Set default kernel if available
-          if (availableKernels.length > 0) {
-            setSelectedKernel(availableKernels[0].name);
+          if (allKernels.length > 0) {
+            setSelectedKernel(allKernels[0].id);
+            setKernelType(allKernels[0].source);
           }
         } else {
-          setError('Failed to initialize kernel service');
+          setError('Failed to initialize kernel services');
         }
       } catch (err) {
         console.error('Error in kernel initialization:', err);
@@ -41,7 +65,7 @@ const KernelSelector = ({ onKernelChange }) => {
       }
     };
     
-    initKernelService();
+    initKernelServices();
   }, []);
   
   // Add a listener for kernel updates
@@ -66,14 +90,27 @@ const KernelSelector = ({ onKernelChange }) => {
       setIsLoading(true);
       setError(null);
       
-      console.log('Connecting to kernel:', selectedKernel);
-      const kernel = await kernelService.startKernel(selectedKernel);
+      console.log('Connecting to kernel:', selectedKernel, 'type:', kernelType);
+      
+      let kernel;
+      if (kernelType === 'jupyter') {
+        // Connect to Jupyter kernel
+        const selectedKernelObj = kernels.find(k => k.id === selectedKernel);
+        kernel = await kernelService.startKernel(selectedKernelObj.name);
+      } else {
+        // Connect to direct Python kernel
+        kernel = await directPythonService.startKernel(selectedKernel);
+      }
       
       if (kernel) {
         console.log('Connected to kernel:', kernel);
         setIsConnected(true);
         if (onKernelChange) {
-          onKernelChange(kernel);
+          // Add the service type to the kernel object
+          onKernelChange({
+            ...kernel,
+            serviceType: kernelType
+          });
         }
       } else {
         setError('Failed to connect to kernel');
@@ -92,13 +129,27 @@ const KernelSelector = ({ onKernelChange }) => {
       setIsLoading(true);
       setError(null);
       
-      const success = await kernelService.restartKernel();
+      let success;
+      if (kernelType === 'jupyter') {
+        success = await kernelService.restartKernel();
+      } else {
+        // For direct Python, stop and start again
+        await directPythonService.stopKernel();
+        success = await directPythonService.startKernel(selectedKernel);
+      }
       
       if (success) {
         console.log('Kernel restarted successfully');
         // Notify that kernel was restarted
         if (onKernelChange) {
-          onKernelChange(kernelService.getActiveKernel());
+          const kernel = kernelType === 'jupyter' 
+            ? kernelService.getActiveKernel()
+            : directPythonService.getActiveKernel();
+            
+          onKernelChange({
+            ...kernel,
+            serviceType: kernelType
+          });
         }
       } else {
         setError('Failed to restart kernel');
@@ -113,7 +164,15 @@ const KernelSelector = ({ onKernelChange }) => {
 
   // Handle kernel selection change
   const handleKernelChange = (e) => {
-    setSelectedKernel(e.target.value);
+    const kernelId = e.target.value;
+    setSelectedKernel(kernelId);
+    
+    // Find the selected kernel to determine its type
+    const selectedKernelObj = kernels.find(k => k.id === kernelId);
+    if (selectedKernelObj) {
+      setKernelType(selectedKernelObj.source);
+    }
+    
     setIsConnected(false);
   };
 
@@ -123,13 +182,32 @@ const KernelSelector = ({ onKernelChange }) => {
     setError(null);
     
     try {
-      const availableKernels = await kernelService.listKernels();
-      console.log('Refreshed kernels:', availableKernels);
-      setKernels(availableKernels);
+      // Get kernels from both services
+      const availableJupyterKernels = await kernelService.listKernels();
+      const availableDirectKernels = await directPythonService.listPythonEnvironments();
+      
+      // Add source information to each kernel
+      const jupyterKernelsWithSource = availableJupyterKernels.map(kernel => ({
+        ...kernel,
+        source: 'jupyter',
+        displayName: `Jupyter: ${kernel.displayName}`
+      }));
+      
+      const directKernelsWithSource = availableDirectKernels.map(kernel => ({
+        ...kernel,
+        source: 'direct'
+      }));
+      
+      // Combine kernels from both sources
+      const allKernels = [...jupyterKernelsWithSource, ...directKernelsWithSource];
+      console.log('Refreshed kernels:', allKernels);
+      
+      setKernels(allKernels);
       
       // If we don't have a selected kernel yet but have available kernels, select the first one
-      if (!selectedKernel && availableKernels.length > 0) {
-        setSelectedKernel(availableKernels[0].name);
+      if (!selectedKernel && allKernels.length > 0) {
+        setSelectedKernel(allKernels[0].id);
+        setKernelType(allKernels[0].source);
       }
     } catch (err) {
       console.error('Error refreshing kernels:', err);
@@ -150,7 +228,7 @@ const KernelSelector = ({ onKernelChange }) => {
       >
         <option value="">Select a kernel</option>
         {kernels.map(kernel => (
-          <option key={kernel.id} value={kernel.name}>
+          <option key={kernel.id} value={kernel.id}>
             {kernel.displayName}
           </option>
         ))}
