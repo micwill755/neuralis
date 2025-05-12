@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+// Import the JupyterLab theme CSS
+import './styles/jupyter-lab-theme.css';
 import App from './App';
 
 // Configure Monaco Editor for Python syntax highlighting

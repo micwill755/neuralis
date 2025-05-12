@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import SplitPane from 'react-split-pane';
 import styled from 'styled-components';
 import Sidebar from './components/Layout/Sidebar';
-import Notebook from './components/Notebook/Notebook';
+import Notebook from './components/Notebook';
 import FileViewer from './components/FileViewer/FileViewer';
 import AmazonQAssistant from './components/assistant/AmazonQAssistant';
 import './App.css';
@@ -336,14 +337,34 @@ function App() {
     const handleKernelSetup = (event) => {
       const { type } = event.detail;
       
-      // Open the kernel setup modal with the selected type
-      console.log(`Opening kernel setup for: ${type}`);
-      
-      // Dispatch an event to show the kernel selector with the selected type
-      const kernelSelectorEvent = new CustomEvent('showKernelSelector', {
-        detail: { environmentType: type }
+      // Import the KernelSetupScreen component dynamically
+      import('./components/kernel/KernelSetupScreen').then(module => {
+        const KernelSetupScreen = module.default;
+        
+        // Create a div for the modal
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'kernel-setup-modal';
+        document.body.appendChild(modalDiv);
+        
+        // Render the KernelSetupScreen in the modal
+        ReactDOM.render(
+          <KernelSetupScreen 
+            initialType={type}
+            onClose={() => {
+              ReactDOM.unmountComponentAtNode(modalDiv);
+              document.body.removeChild(modalDiv);
+            }}
+            onSetupComplete={(config) => {
+              console.log('Kernel setup complete:', config);
+              // Trigger a refresh of the kernel list
+              window.dispatchEvent(new CustomEvent('kernelUpdated'));
+              ReactDOM.unmountComponentAtNode(modalDiv);
+              document.body.removeChild(modalDiv);
+            }}
+          />,
+          modalDiv
+        );
       });
-      window.dispatchEvent(kernelSelectorEvent);
     };
     
     window.addEventListener('openKernelSetup', handleKernelSetup);

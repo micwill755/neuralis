@@ -1,485 +1,654 @@
 /**
- * Kernel Service
- * Handles creation and management of kernel environments
+ * Client-side service for managing connections to Python kernels running in Docker containers
  */
 
-// Store active kernel information
-let activeKernel = null;
-
-/**
- * Initialize the kernel service
- * @returns {Promise<boolean>} - Whether initialization was successful
- */
-const initialize = async () => {
-  try {
-    console.log('Initializing kernel service...');
-    // In a real implementation, this would perform any necessary setup
-    return true;
-  } catch (error) {
-    console.error('Error initializing kernel service:', error);
-    return false;
+class KernelService {
+  constructor() {
+    this.baseUrl = 'http://localhost:8888';
+    this.apiUrl = '/api/kernels'; // Backend API endpoint
+    this.activeKernel = null;
+    this.availableKernels = [];
+    this.executionCallbacks = {};
   }
-};
 
-/**
- * Create a conda environment for a kernel
- * @param {string} name - Name of the environment
- * @param {string} pythonVersion - Python version to use
- * @param {Array} packages - List of packages to install
- * @returns {Promise<Object>} - Information about the created environment
- */
-const createCondaEnvironment = async (name, pythonVersion = "3.9", packages = []) => {
-  try {
-    console.log(`Creating conda environment: ${name} with Python ${pythonVersion}`);
-    
-    // In a real implementation, this would execute commands via a backend API
-    // For now, we'll simulate the environment creation
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newKernel = {
-      id: `conda_${name}`,
-      name,
-      displayName: `Conda: ${name} (Python ${pythonVersion})`,
-      type: 'conda',
-      pythonVersion,
-      packages,
-      path: `/opt/conda/envs/${name}`,
-      status: 'active'
-    };
-    
-    // Set as active kernel
-    activeKernel = newKernel;
-    
-    return newKernel;
-  } catch (error) {
-    console.error('Error creating conda environment:', error);
-    throw error;
-  }
-};
-
-/**
- * Create a Docker container for a kernel
- * @param {string} name - Name of the container
- * @param {string} image - Docker image to use
- * @param {Object} options - Additional Docker options
- * @returns {Promise<Object>} - Information about the created container
- */
-const createDockerContainer = async (name, image = "jupyter/scipy-notebook", options = {}) => {
-  try {
-    console.log(`Creating Docker container: ${name} using image ${image}`);
-    
-    // In a real implementation, this would execute commands via a backend API
-    // For now, we'll simulate the container creation
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const newKernel = {
-      id: `docker_${Date.now()}`,
-      name,
-      displayName: `Docker: ${name} (${image})`,
-      type: 'docker',
-      image,
-      containerId: `container_${Date.now()}`,
-      status: 'running',
-      ports: { 8888: 8888 },
-      options
-    };
-    
-    // Set as active kernel
-    activeKernel = newKernel;
-    
-    return newKernel;
-  } catch (error) {
-    console.error('Error creating Docker container:', error);
-    throw error;
-  }
-};
-
-/**
- * Connect to a terminal-based kernel
- * @param {string} host - Host to connect to
- * @param {number} port - Port to connect to
- * @param {Object} credentials - Credentials for connection
- * @returns {Promise<Object>} - Information about the connection
- */
-const connectToTerminalKernel = async (host = "localhost", port = 8888, credentials = {}) => {
-  try {
-    console.log(`Connecting to terminal kernel at ${host}:${port}`);
-    
-    // In a real implementation, this would establish a connection via a backend API
-    // For now, we'll simulate the connection
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newKernel = {
-      id: `terminal_${Date.now()}`,
-      name: `terminal_${host}_${port}`,
-      displayName: `Terminal: ${host}:${port}`,
-      type: 'terminal',
-      host,
-      port,
-      connectionId: `conn_${Date.now()}`,
-      status: 'connected'
-    };
-    
-    // Set as active kernel
-    activeKernel = newKernel;
-    
-    return newKernel;
-  } catch (error) {
-    console.error('Error connecting to terminal kernel:', error);
-    throw error;
-  }
-};
-
-/**
- * Get available kernels
- * @returns {Promise<Array>} - List of available kernels
- */
-const getAvailableKernels = async () => {
-  // In a real implementation, this would query the system for available kernels
-  // For now, we'll return a static list
-  
-  return [
-    {
-      id: 'python3',
-      name: 'python3',
-      displayName: 'Python 3',
-      language: 'python',
-      type: 'conda',
-      pythonVersion: '3.9',
-      packages: ['numpy', 'pandas', 'matplotlib']
-    },
-    {
-      id: 'r',
-      name: 'r',
-      displayName: 'R',
-      language: 'r',
-      type: 'conda',
-      rVersion: '4.1',
-      packages: ['tidyverse', 'ggplot2']
-    },
-    {
-      id: 'tensorflow',
-      name: 'tensorflow',
-      displayName: 'TensorFlow',
-      language: 'python',
-      type: 'docker',
-      image: 'tensorflow/tensorflow:latest-gpu',
-      packages: ['tensorflow', 'keras', 'numpy', 'pandas']
-    },
-    {
-      id: 'julia',
-      name: 'julia',
-      displayName: 'Julia',
-      language: 'julia',
-      type: 'terminal',
-      host: 'localhost',
-      port: 8888
-    }
-  ];
-};
-
-/**
- * List available kernels
- * @returns {Promise<Array>} - List of available kernels
- */
-const listKernels = async () => {
-  return getAvailableKernels();
-};
-
-/**
- * Start a kernel
- * @param {string} kernelName - Name of the kernel to start
- * @returns {Promise<Object>} - Information about the started kernel
- */
-const startKernel = async (kernelName) => {
-  try {
-    console.log(`Starting kernel: ${kernelName}`);
-    
-    // In a real implementation, this would start the kernel via a backend API
-    // For now, we'll simulate starting the kernel
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Find the kernel in the available kernels
-    const kernels = await getAvailableKernels();
-    const kernel = kernels.find(k => k.name === kernelName);
-    
-    if (!kernel) {
-      throw new Error(`Kernel ${kernelName} not found`);
-    }
-    
-    // Set as active kernel
-    activeKernel = {
-      ...kernel,
-      status: 'active',
-      startTime: new Date().toISOString()
-    };
-    
-    return activeKernel;
-  } catch (error) {
-    console.error('Error starting kernel:', error);
-    throw error;
-  }
-};
-
-/**
- * Stop the active kernel
- * @returns {Promise<boolean>} - Whether the kernel was stopped successfully
- */
-const stopKernel = async () => {
-  try {
-    if (!activeKernel) {
-      console.warn('No active kernel to stop');
-      return false;
-    }
-    
-    console.log(`Stopping kernel: ${activeKernel.name}`);
-    
-    // In a real implementation, this would stop the kernel via a backend API
-    // For now, we'll simulate stopping the kernel
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    activeKernel = null;
-    return true;
-  } catch (error) {
-    console.error('Error stopping kernel:', error);
-    throw error;
-  }
-};
-
-/**
- * Restart the active kernel
- * @returns {Promise<boolean>} - Whether the kernel was restarted successfully
- */
-const restartKernel = async () => {
-  try {
-    if (!activeKernel) {
-      console.warn('No active kernel to restart');
-      return false;
-    }
-    
-    console.log(`Restarting kernel: ${activeKernel.name}`);
-    
-    // In a real implementation, this would restart the kernel via a backend API
-    // For now, we'll simulate restarting the kernel
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    activeKernel = {
-      ...activeKernel,
-      status: 'active',
-      restartTime: new Date().toISOString()
-    };
-    
-    return true;
-  } catch (error) {
-    console.error('Error restarting kernel:', error);
-    throw error;
-  }
-};
-
-/**
- * Get the active kernel
- * @returns {Object|null} - The active kernel or null if no kernel is active
- */
-const getActiveKernel = () => {
-  return activeKernel;
-};
-
-/**
- * Execute code in the active kernel
- * @param {string} code - Code to execute
- * @returns {Promise<Object>} - Execution result
- */
-const executeCode = async (code) => {
-  try {
-    if (!activeKernel) {
-      throw new Error('No active kernel to execute code');
-    }
-    
-    console.log(`Executing code in kernel ${activeKernel.name}:`, code);
-    
-    // In a real implementation, this would execute the code via a backend API
-    // For now, we'll simulate code execution based on the kernel type
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Parse the code to determine what it's trying to do
-    let outputs = [];
-    
-    // Handle print statements
-    const printRegex = /print\s*\((.*)\)/g;
-    let printMatch;
-    while ((printMatch = printRegex.exec(code)) !== null) {
-      let printContent = printMatch[1].trim();
+  /**
+   * Initialize the kernel service and fetch available kernels
+   */
+  async initialize() {
+    try {
+      console.log('Initializing kernel service...');
       
-      // Remove quotes if present
-      if ((printContent.startsWith('"') && printContent.endsWith('"')) || 
-          (printContent.startsWith("'") && printContent.endsWith("'"))) {
-        printContent = printContent.substring(1, printContent.length - 1);
+      // Initialize the backend kernel manager
+      const initResponse = await fetch(`${this.apiUrl}/initialize`);
+      if (!initResponse.ok) {
+        throw new Error('Failed to initialize kernel manager');
       }
       
-      outputs.push({
-        output_type: 'stream',
-        name: 'stdout',
-        text: printContent
+      // Just check if the server is accessible
+      const response = await fetch(`${this.baseUrl}/api/kernelspecs`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
       });
+      
+      if (!response.ok) {
+        console.error('Failed to connect to kernel server:', await response.text());
+        throw new Error('Failed to connect to kernel server');
+      }
+      
+      console.log('Kernel server is accessible');
+      
+      // Get available kernels
+      await this.listKernels();
+      
+      return true;
+    } catch (error) {
+      console.error('Error initializing kernel service:', error);
+      return false;
+    }
+  }
+
+  /**
+   * List available kernels from the Jupyter server
+   */
+  async listKernels() {
+    try {
+      console.log('Listing available kernels...');
+      
+      // Get kernelspecs (available kernel types)
+      const specsResponse = await fetch(`${this.baseUrl}/api/kernelspecs`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
+      });
+      
+      if (!specsResponse.ok) {
+        console.error('Failed to fetch kernelspecs:', await specsResponse.text());
+        throw new Error('Failed to fetch kernelspecs');
+      }
+      
+      const specsData = await specsResponse.json();
+      console.log('Available kernelspecs:', specsData);
+      
+      // Format kernel information
+      this.availableKernels = Object.entries(specsData.kernelspecs).map(([id, spec]) => ({
+        id,
+        name: spec.name,
+        displayName: spec.spec.display_name,
+        language: spec.spec.language,
+        isRunning: false,
+      }));
+      
+      console.log('Formatted kernels:', this.availableKernels);
+      return this.availableKernels;
+    } catch (error) {
+      console.error('Error listing kernels:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available containers from the backend
+   */
+  async listContainers() {
+    try {
+      const response = await fetch(`${this.apiUrl}/containers`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch containers');
+      }
+      
+      const data = await response.json();
+      return data.containers || [];
+    } catch (error) {
+      console.error('Error listing containers:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available conda environments from the backend
+   */
+  async listCondaEnvironments() {
+    try {
+      const response = await fetch(`${this.apiUrl}/conda-environments`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch conda environments');
+      }
+      
+      const data = await response.json();
+      return data.environments || [];
+    } catch (error) {
+      console.error('Error listing conda environments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available terminal instances from the backend
+   */
+  async listTerminals() {
+    try {
+      const response = await fetch('/api/terminals');
+      if (!response.ok) {
+        throw new Error('Failed to fetch terminal instances');
+      }
+      
+      const data = await response.json();
+      return data || [];
+    } catch (error) {
+      console.error('Error listing terminal instances:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Build a new kernel container via the backend
+   */
+  async buildContainer(options = {}) {
+    try {
+      const response = await fetch(`${this.apiUrl}/containers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to build container');
+      }
+      
+      const data = await response.json();
+      return data.container;
+    } catch (error) {
+      console.error('Error building container:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Start a kernel with the specified name
+   */
+  async startKernel(kernelName) {
+    try {
+      console.log('Starting kernel:', kernelName);
+      
+      // Check if this is a Docker container, conda env, or terminal
+      if (kernelName.startsWith('docker-')) {
+        // Handle Docker container kernel
+        const containerName = kernelName.replace('docker-', '');
+        // Implementation would connect to the Docker container's kernel
+        console.log('Connecting to Docker container kernel:', containerName);
+        // For now, we'll just simulate a connection
+        this.activeKernel = {
+          id: `docker-${Date.now()}`,
+          name: containerName,
+          type: 'docker'
+        };
+        return this.activeKernel;
+      } else if (kernelName.startsWith('conda-')) {
+        // Handle conda environment kernel
+        const envName = kernelName.replace('conda-', '');
+        console.log('Connecting to conda environment kernel:', envName);
+        // For now, we'll just simulate a connection
+        this.activeKernel = {
+          id: `conda-${Date.now()}`,
+          name: envName,
+          type: 'conda'
+        };
+        return this.activeKernel;
+      } else if (kernelName.startsWith('term-')) {
+        // Handle terminal instance kernel
+        const termName = kernelName.replace('term-', '');
+        console.log('Connecting to terminal instance kernel:', termName);
+        // For now, we'll just simulate a connection
+        this.activeKernel = {
+          id: `term-${Date.now()}`,
+          name: termName,
+          type: 'terminal'
+        };
+        return this.activeKernel;
+      }
+      
+      // Default: Connect to Jupyter kernel
+      const response = await fetch(`${this.baseUrl}/api/kernels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
+        body: JSON.stringify({ name: kernelName }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to start kernel:', errorText);
+        throw new Error(`Failed to start kernel: ${response.statusText}`);
+      }
+      
+      const kernelData = await response.json();
+      console.log('Kernel started:', kernelData);
+      
+      this.activeKernel = {
+        id: kernelData.id,
+        name: kernelData.name,
+        type: 'jupyter'
+      };
+      
+      // Set up WebSocket connection for this kernel
+      this.setupWebSocket();
+      
+      return this.activeKernel;
+    } catch (error) {
+      console.error('Error starting kernel:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Set up WebSocket connection to the kernel
+   */
+  setupWebSocket() {
+    if (!this.activeKernel) {
+      console.log('No active kernel, skipping WebSocket setup');
+      return;
     }
     
-    // Handle variable assignments and expressions
-    if (code.includes('=') && !code.includes('==')) {
-      // Extract variable name
-      const varMatch = code.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
-      if (varMatch) {
-        const varName = varMatch[1];
+    // Close existing connection if any
+    if (this.ws) {
+      console.log('Closing existing WebSocket connection');
+      this.ws.close();
+    }
+    
+    // Only set up WebSocket for Jupyter kernels
+    if (this.activeKernel.type !== 'jupyter') {
+      console.log('Not a Jupyter kernel, skipping WebSocket setup');
+      return;
+    }
+    
+    // Create new WebSocket connection
+    const wsUrl = `ws://localhost:8888/api/kernels/${this.activeKernel.id}/channels`;
+    console.log('Setting up WebSocket connection to:', wsUrl);
+    
+    try {
+      this.ws = new WebSocket(wsUrl);
+      
+      this.ws.onopen = () => {
+        console.log('Kernel WebSocket connection established');
+      };
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          this.handleKernelMessage(message);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      this.ws.onerror = (error) => {
+        console.error('Kernel WebSocket error:', error);
+      };
+      
+      this.ws.onclose = () => {
+        console.log('Kernel WebSocket connection closed');
+      };
+    } catch (error) {
+      console.error('Error setting up WebSocket:', error);
+    }
+  }
+
+  /**
+   * Handle incoming messages from the kernel
+   */
+  handleKernelMessage(message) {
+    console.log('Received kernel message:', message.msg_type || 'unknown type');
+    
+    // Handle different message types from the kernel
+    if (message.msg_type === 'execute_result' || message.msg_type === 'stream' || message.msg_type === 'display_data') {
+      const parentMsgId = message.parent_header?.msg_id;
+      if (!parentMsgId) {
+        console.warn('Message has no parent_header.msg_id:', message);
+        return;
+      }
+      
+      const callback = this.executionCallbacks[parentMsgId];
+      
+      if (callback) {
+        let content = '';
+        let imageData = null;
         
-        // Simulate variable value based on context
-        let varValue;
-        if (code.includes('range(')) {
-          varValue = 'range(0, 10)';
-        } else if (code.includes('[')) {
-          varValue = '[1, 2, 3, 4, 5]';
-        } else if (code.includes('{')) {
-          varValue = "{'key1': 'value1', 'key2': 'value2'}";
-        } else if (code.includes('True') || code.includes('False')) {
-          varValue = code.includes('True') ? 'True' : 'False';
-        } else if (code.includes('"') || code.includes("'")) {
-          varValue = '"some string value"';
-        } else {
-          // Default to a number
-          varValue = Math.floor(Math.random() * 100).toString();
+        if (message.msg_type === 'execute_result' && message.content?.data) {
+          if (message.content.data['text/plain']) {
+            content = message.content.data['text/plain'];
+          } else if (message.content.data['text/html']) {
+            content = message.content.data['text/html'];
+          }
+          
+          // Check for image data
+          if (message.content.data['image/png']) {
+            imageData = {
+              type: 'image/png',
+              data: message.content.data['image/png']
+            };
+          }
+        } else if (message.msg_type === 'stream' && message.content?.text) {
+          content = message.content.text;
+        } else if (message.msg_type === 'display_data' && message.content?.data) {
+          // Handle display_data messages (often used for plots)
+          if (message.content.data['text/plain']) {
+            content = message.content.data['text/plain'];
+          }
+          
+          // Check for image data
+          if (message.content.data['image/png']) {
+            imageData = {
+              type: 'image/png',
+              data: message.content.data['image/png']
+            };
+          }
         }
         
-        outputs.push({
-          output_type: 'execute_result',
-          data: {
-            'text/plain': `${varName} = ${varValue}`
-          },
-          execution_count: 1,
-          metadata: {}
+        callback({
+          type: message.msg_type,
+          content,
+          imageData,
+          executionCount: message.content?.execution_count,
+        });
+      } else {
+        console.warn('No callback found for message ID:', parentMsgId);
+      }
+    }
+    
+    // Handle errors
+    if (message.msg_type === 'error') {
+      const parentMsgId = message.parent_header?.msg_id;
+      if (!parentMsgId) return;
+      
+      const callback = this.executionCallbacks[parentMsgId];
+      
+      if (callback) {
+        const errorMessage = message.content?.traceback?.join('\n') || 
+                            message.content?.ename + ': ' + message.content?.evalue || 
+                            'Unknown error';
+        
+        callback({
+          type: 'error',
+          content: errorMessage,
         });
       }
     }
     
-    // Handle import statements
-    if (code.includes('import ')) {
-      // No visible output for successful imports
-    }
-    
-    // Handle matplotlib
-    if (code.includes('import matplotlib') || code.includes('plt.')) {
-      if (code.includes('plt.show()')) {
-        outputs.push({
-          output_type: 'display_data',
-          data: {
-            'image/png': 'base64-encoded-image-data',
-            'text/plain': '[Matplotlib figure]'
-          },
-          metadata: {}
-        });
+    // Handle execution completion
+    if (message.msg_type === 'status' && message.content?.execution_state === 'idle') {
+      const parentMsgId = message.parent_header?.msg_id;
+      if (!parentMsgId) return;
+      
+      const callback = this.executionCallbacks[parentMsgId];
+      
+      if (callback) {
+        callback({ type: 'execution_complete' });
+        // Don't delete the callback yet as there might be more messages coming
+        // We'll delete it after a short timeout
+        setTimeout(() => {
+          delete this.executionCallbacks[parentMsgId];
+        }, 1000);
       }
     }
-    
-    // Handle pandas
-    if (code.includes('import pandas') || code.includes('pd.')) {
-      if (code.includes('DataFrame') || code.includes('read_csv')) {
-        outputs.push({
-          output_type: 'execute_result',
-          data: {
-            'text/html': '<table border="1" class="dataframe"><thead><tr><th></th><th>A</th><th>B</th><th>C</th></tr></thead><tbody><tr><th>0</th><td>1</td><td>4</td><td>7</td></tr><tr><th>1</th><td>2</td><td>5</td><td>8</td></tr><tr><th>2</th><td>3</td><td>6</td><td>9</td></tr></tbody></table>',
-            'text/plain': '   A  B  C\n0  1  4  7\n1  2  5  8\n2  3  6  9'
-          },
-          execution_count: 1,
-          metadata: {}
-        });
-      }
-    }
-    
-    // If no specific output was generated, provide a default
-    if (outputs.length === 0) {
-      // Check if the code is an expression that would return a value
-      const expressionRegex = /^[^=;]*$/;
-      if (expressionRegex.test(code.trim())) {
-        // It's likely an expression, return a value
-        outputs.push({
-          output_type: 'execute_result',
-          data: {
-            'text/plain': generateAppropriateOutput(code)
-          },
-          execution_count: 1,
-          metadata: {}
-        });
-      }
-    }
-    
-    return {
-      status: 'ok',
-      execution_count: 1,
-      outputs: outputs.length > 0 ? outputs : []
-    };
-  } catch (error) {
-    console.error('Error executing code:', error);
-    throw error;
   }
-};
 
-/**
- * Generate appropriate output based on code content
- * @param {string} code - The code to analyze
- * @returns {string} - Appropriate output
- */
-function generateAppropriateOutput(code) {
-  code = code.trim();
-  
-  // Check for common Python expressions
-  if (code.match(/^\d+(\s*[\+\-\*\/]\s*\d+)+$/)) {
-    // It's a math expression
-    return Math.floor(Math.random() * 100).toString();
-  } else if (code.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
-    // It's a variable name
-    if (['True', 'False', 'None'].includes(code)) {
-      return code;
+  /**
+   * Execute code in the active kernel
+   */
+  async executeCode(code, onOutput) {
+    if (!this.activeKernel) {
+      throw new Error('No active kernel connection');
     }
-    return code;
-  } else if (code.includes('len(')) {
-    return Math.floor(Math.random() * 10).toString();
-  } else if (code.includes('.keys()')) {
-    return "dict_keys(['key1', 'key2', 'key3'])";
-  } else if (code.includes('.values()')) {
-    return "dict_values([1, 2, 3])";
-  } else if (code.includes('.items()')) {
-    return "dict_items([('key1', 1), ('key2', 2), ('key3', 3)])";
-  } else if (code.includes('[') && code.includes(']')) {
-    return code; // Return array expressions as-is
-  } else {
-    return code; // Default to returning the code itself
+    
+    // Handle different kernel types
+    if (this.activeKernel.type === 'docker') {
+      // Execute code in Docker container
+      return this.executeCodeInDocker(code, onOutput);
+    } else if (this.activeKernel.type === 'conda') {
+      // Execute code in conda environment
+      return this.executeCodeInConda(code, onOutput);
+    } else if (this.activeKernel.type === 'terminal') {
+      // Execute code in terminal
+      return this.executeCodeInTerminal(code, onOutput);
+    }
+    
+    // Default: Execute in Jupyter kernel via WebSocket
+    if (!this.ws) {
+      throw new Error('No WebSocket connection to kernel');
+    }
+    
+    // Create a message ID
+    const msgId = `execute_${Date.now()}`;
+    
+    // Register callback for this execution
+    this.executionCallbacks[msgId] = onOutput;
+    
+    // Create execute request message
+    const message = {
+      header: {
+        msg_id: msgId,
+        username: 'neuralis',
+        session: `session_${Date.now()}`,
+        msg_type: 'execute_request',
+        version: '5.2',
+      },
+      content: {
+        code: code,
+        silent: false,
+        store_history: true,
+        user_expressions: {},
+        allow_stdin: false,
+      },
+      metadata: {},
+      parent_header: {},
+      channel: 'shell',
+    };
+    
+    console.log('Sending execute request:', msgId);
+    
+    // Send the message
+    this.ws.send(JSON.stringify(message));
+    
+    return msgId;
+  }
+  
+  /**
+   * Execute code in a Docker container
+   */
+  async executeCodeInDocker(code, onOutput) {
+    const msgId = `docker_${Date.now()}`;
+    
+    try {
+      // Simulate execution in Docker container
+      console.log('Executing code in Docker container:', this.activeKernel.name);
+      
+      // Call onOutput with initial status
+      onOutput({
+        type: 'stream',
+        content: `Executing in Docker container: ${this.activeKernel.name}\n`,
+      });
+      
+      // Simulate execution delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Simulate execution result
+      onOutput({
+        type: 'execute_result',
+        content: 'Docker execution result: ' + code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+        executionCount: Math.floor(Math.random() * 100),
+      });
+      
+      // Simulate execution completion
+      onOutput({ type: 'execution_complete' });
+      
+      return msgId;
+    } catch (error) {
+      onOutput({
+        type: 'error',
+        content: `Error executing in Docker: ${error.message}`,
+      });
+      throw error;
+    }
+  }
+  
+  /**
+   * Execute code in a conda environment
+   */
+  async executeCodeInConda(code, onOutput) {
+    const msgId = `conda_${Date.now()}`;
+    
+    try {
+      // Simulate execution in conda environment
+      console.log('Executing code in conda environment:', this.activeKernel.name);
+      
+      // Call onOutput with initial status
+      onOutput({
+        type: 'stream',
+        content: `Executing in conda environment: ${this.activeKernel.name}\n`,
+      });
+      
+      // Simulate execution delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Simulate execution result
+      onOutput({
+        type: 'execute_result',
+        content: 'Conda execution result: ' + code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+        executionCount: Math.floor(Math.random() * 100),
+      });
+      
+      // Simulate execution completion
+      onOutput({ type: 'execution_complete' });
+      
+      return msgId;
+    } catch (error) {
+      onOutput({
+        type: 'error',
+        content: `Error executing in conda: ${error.message}`,
+      });
+      throw error;
+    }
+  }
+  
+  /**
+   * Execute code in a terminal
+   */
+  async executeCodeInTerminal(code, onOutput) {
+    const msgId = `terminal_${Date.now()}`;
+    
+    try {
+      // Simulate execution in terminal
+      console.log('Executing code in terminal:', this.activeKernel.name);
+      
+      // Call onOutput with initial status
+      onOutput({
+        type: 'stream',
+        content: `Executing in terminal: ${this.activeKernel.name}\n`,
+      });
+      
+      // Simulate execution delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Simulate execution result
+      onOutput({
+        type: 'execute_result',
+        content: 'Terminal execution result: ' + code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+        executionCount: Math.floor(Math.random() * 100),
+      });
+      
+      // Simulate execution completion
+      onOutput({ type: 'execution_complete' });
+      
+      return msgId;
+    } catch (error) {
+      onOutput({
+        type: 'error',
+        content: `Error executing in terminal: ${error.message}`,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Restart the current kernel
+   */
+  async restartKernel() {
+    if (!this.activeKernel) return false;
+    
+    // Handle different kernel types
+    if (this.activeKernel.type !== 'jupyter') {
+      // Simulate restart for non-Jupyter kernels
+      console.log(`Restarting ${this.activeKernel.type} kernel: ${this.activeKernel.name}`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return true;
+    }
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/api/kernels/${this.activeKernel.id}/restart`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Error restarting kernel:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Interrupt the current kernel execution
+   */
+  async interruptKernel() {
+    if (!this.activeKernel) return false;
+    
+    // Handle different kernel types
+    if (this.activeKernel.type !== 'jupyter') {
+      // Simulate interrupt for non-Jupyter kernels
+      console.log(`Interrupting ${this.activeKernel.type} kernel: ${this.activeKernel.name}`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return true;
+    }
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/api/kernels/${this.activeKernel.id}/interrupt`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Error interrupting kernel:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get the active kernel information
+   */
+  getActiveKernel() {
+    return this.activeKernel;
   }
 }
 
-// Export all functions
-const kernelService = {
-  initialize,
-  createCondaEnvironment,
-  createDockerContainer,
-  connectToTerminalKernel,
-  getAvailableKernels,
-  listKernels,
-  startKernel,
-  stopKernel,
-  restartKernel,
-  getActiveKernel,
-  executeCode
-};
+// Create a singleton instance
+const kernelService = new KernelService();
 
 export default kernelService;

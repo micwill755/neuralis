@@ -1,0 +1,421 @@
+/* JupyterLab Theme CSS */
+:root {
+  /* JupyterLab color scheme */
+  --jp-layout-color0: #ffffff;
+  --jp-layout-color1: #f5f5f5;
+  --jp-layout-color2: #eeeeee;
+  --jp-layout-color3: #e0e0e0;
+  --jp-layout-color4: #bdbdbd;
+  
+  --jp-ui-font-color0: rgba(0, 0, 0, 1.0);
+  --jp-ui-font-color1: rgba(0, 0, 0, 0.87);
+  --jp-ui-font-color2: rgba(0, 0, 0, 0.54);
+  --jp-ui-font-color3: rgba(0, 0, 0, 0.38);
+  
+  --jp-border-color0: #e0e0e0;
+  --jp-border-color1: #bdbdbd;
+  --jp-border-color2: #9e9e9e;
+  --jp-border-color3: #757575;
+  
+  --jp-brand-color0: #2196f3;
+  --jp-brand-color1: #1976d2;
+  --jp-brand-color2: #1565c0;
+  --jp-brand-color3: #0d47a1;
+  
+  --jp-accent-color0: #f37626;
+  --jp-accent-color1: #e76f51;
+  --jp-accent-color2: #ef6c00;
+  --jp-accent-color3: #e65100;
+  
+  --jp-warn-color0: #f44336;
+  --jp-warn-color1: #e53935;
+  --jp-warn-color2: #d32f2f;
+  --jp-warn-color3: #c62828;
+  
+  --jp-success-color0: #4caf50;
+  --jp-success-color1: #43a047;
+  --jp-success-color2: #388e3c;
+  --jp-success-color3: #2e7d32;
+  
+  --jp-info-color0: #2196f3;
+  --jp-info-color1: #1976d2;
+  --jp-info-color2: #1565c0;
+  --jp-info-color3: #0d47a1;
+  
+  /* Font sizes */
+  --jp-ui-font-size0: 0.75rem;
+  --jp-ui-font-size1: 0.85rem;
+  --jp-ui-font-size2: 0.95rem;
+  --jp-ui-font-size3: 1.05rem;
+  
+  /* Spacing */
+  --jp-ui-spacing0: 4px;
+  --jp-ui-spacing1: 8px;
+  --jp-ui-spacing2: 12px;
+  --jp-ui-spacing3: 16px;
+  
+  /* Borders */
+  --jp-border-width: 1px;
+  --jp-border-radius: 2px;
+  
+  /* Icons */
+  --jp-icon-size0: 16px;
+  --jp-icon-size1: 20px;
+  --jp-icon-size2: 24px;
+  --jp-icon-size3: 32px;
+}
+
+/* Main layout */
+.jupyter-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: var(--jp-ui-font-size1);
+}
+
+/* Top bar */
+.jp-top-bar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  background-color: var(--jp-layout-color1);
+  border-bottom: var(--jp-border-width) solid var(--jp-border-color0);
+  padding: 0 var(--jp-ui-spacing2);
+}
+
+/* Main area */
+.jp-main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left sidebar */
+.jp-left-sidebar {
+  width: 250px;
+  background-color: var(--jp-layout-color1);
+  border-right: var(--jp-border-width) solid var(--jp-border-color0);
+  overflow-y: auto;
+}
+
+/* Content area */
+.jp-content-area {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Notebook area */
+.jp-notebook-panel {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--jp-layout-color0);
+  padding: var(--jp-ui-spacing3);
+}
+
+/* Notebook toolbar */
+.jp-notebook-toolbar {
+  display: flex;
+  align-items: center;
+  background-color: var(--jp-layout-color1);
+  border-bottom: var(--jp-border-width) solid var(--jp-border-color0);
+  padding: var(--jp-ui-spacing1) var(--jp-ui-spacing2);
+  height: 36px;
+}
+
+/* Toolbar buttons */
+.jp-toolbar-button {
+  background-color: transparent;
+  border: none;
+  border-radius: var(--jp-border-radius);
+  padding: var(--jp-ui-spacing0) var(--jp-ui-spacing1);
+  margin-right: var(--jp-ui-spacing1);
+  cursor: pointer;
+  color: var(--jp-ui-font-color1);
+  font-size: var(--jp-ui-font-size1);
+  display: flex;
+  align-items: center;
+}
+
+.jp-toolbar-button:hover {
+  background-color: var(--jp-layout-color2);
+}
+
+.jp-toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Kernel indicator */
+.jp-kernel-indicator {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding: var(--jp-ui-spacing0) var(--jp-ui-spacing1);
+  border-radius: var(--jp-border-radius);
+  background-color: var(--jp-layout-color2);
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jp-kernel-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: var(--jp-ui-spacing1);
+}
+
+.jp-kernel-status.idle {
+  background-color: var(--jp-success-color0);
+}
+
+.jp-kernel-status.busy {
+  background-color: var(--jp-brand-color0);
+  animation: pulse 1.5s infinite;
+}
+
+.jp-kernel-status.offline {
+  background-color: var(--jp-layout-color4);
+}
+
+/* Notebook cells */
+.jp-cell {
+  margin-bottom: var(--jp-ui-spacing2);
+  position: relative;
+}
+
+.jp-cell.jp-mod-active {
+  border-left: 3px solid var(--jp-brand-color1);
+}
+
+.jp-cell-prompt {
+  position: absolute;
+  left: 0;
+  width: 64px;
+  text-align: right;
+  color: var(--jp-brand-color1);
+  font-family: monospace;
+  padding: var(--jp-ui-spacing1) var(--jp-ui-spacing2);
+  user-select: none;
+}
+
+.jp-cell-prompt.jp-mod-markdown {
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-cell-input {
+  margin-left: 64px;
+  border: var(--jp-border-width) solid transparent;
+  border-radius: var(--jp-border-radius);
+}
+
+.jp-cell.jp-mod-active .jp-cell-input {
+  border-color: var(--jp-border-color1);
+}
+
+.jp-cell-editor {
+  min-height: 24px;
+  padding: var(--jp-ui-spacing1);
+  font-family: monospace;
+  font-size: var(--jp-ui-font-size1);
+  line-height: 1.5;
+}
+
+.jp-cell-output {
+  margin-left: 64px;
+  padding: var(--jp-ui-spacing1);
+  background-color: var(--jp-layout-color0);
+  overflow-x: auto;
+}
+
+.jp-cell-output-text {
+  font-family: monospace;
+  white-space: pre-wrap;
+}
+
+.jp-cell-output-error {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: var(--jp-warn-color1);
+}
+
+/* Markdown rendering */
+.jp-markdown-rendered {
+  padding: var(--jp-ui-spacing1);
+  line-height: 1.5;
+}
+
+.jp-markdown-rendered h1,
+.jp-markdown-rendered h2,
+.jp-markdown-rendered h3,
+.jp-markdown-rendered h4,
+.jp-markdown-rendered h5,
+.jp-markdown-rendered h6 {
+  margin-top: var(--jp-ui-spacing2);
+  margin-bottom: var(--jp-ui-spacing1);
+  font-weight: 500;
+}
+
+.jp-markdown-rendered p {
+  margin-bottom: var(--jp-ui-spacing2);
+}
+
+.jp-markdown-rendered pre {
+  background-color: var(--jp-layout-color2);
+  padding: var(--jp-ui-spacing1);
+  border-radius: var(--jp-border-radius);
+  overflow-x: auto;
+}
+
+.jp-markdown-rendered code {
+  font-family: monospace;
+  background-color: var(--jp-layout-color2);
+  padding: 0.2em 0.4em;
+  border-radius: var(--jp-border-radius);
+  font-size: 85%;
+}
+
+/* Kernel selector */
+.jp-kernel-selector {
+  display: flex;
+  align-items: center;
+  margin-left: var(--jp-ui-spacing2);
+}
+
+.jp-kernel-selector select {
+  padding: var(--jp-ui-spacing0) var(--jp-ui-spacing1);
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+  border-radius: var(--jp-border-radius);
+  background-color: var(--jp-layout-color0);
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color1);
+}
+
+/* Status bar */
+.jp-status-bar {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  background-color: var(--jp-layout-color1);
+  border-top: var(--jp-border-width) solid var(--jp-border-color0);
+  padding: 0 var(--jp-ui-spacing2);
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+}
+
+/* Animation */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Monaco editor customizations */
+.monaco-editor .margin {
+  background-color: var(--jp-layout-color0) !important;
+}
+
+.monaco-editor .line-numbers {
+  color: var(--jp-ui-font-color2) !important;
+}
+
+/* Add cell button */
+.jp-add-cell {
+  text-align: center;
+  padding: var(--jp-ui-spacing1);
+  margin: var(--jp-ui-spacing1) 0;
+  color: var(--jp-ui-font-color2);
+  cursor: pointer;
+  border-radius: var(--jp-border-radius);
+}
+
+.jp-add-cell:hover {
+  background-color: var(--jp-layout-color2);
+}
+
+/* Cell execution count */
+.jp-execution-count {
+  font-family: monospace;
+  color: var(--jp-brand-color1);
+  font-size: var(--jp-ui-font-size1);
+  text-align: right;
+  padding-right: var(--jp-ui-spacing1);
+}
+
+/* Cell toolbar */
+.jp-cell-toolbar {
+  position: absolute;
+  right: var(--jp-ui-spacing1);
+  top: var(--jp-ui-spacing1);
+  display: none;
+  background-color: var(--jp-layout-color1);
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+  border-radius: var(--jp-border-radius);
+}
+
+.jp-cell:hover .jp-cell-toolbar {
+  display: flex;
+}
+
+.jp-cell-toolbar-button {
+  background: none;
+  border: none;
+  padding: var(--jp-ui-spacing0);
+  cursor: pointer;
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-cell-toolbar-button:hover {
+  color: var(--jp-ui-font-color0);
+}
+.jp-toolbar-buttons {
+  display: flex;
+  align-items: center;
+  margin-left: var(--jp-ui-spacing2);
+}
+/* Fix for cell output visibility */
+.jp-cell-output {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+
+/* Fix for cell editor height adjustment */
+.jp-cell-editor {
+  min-height: 24px;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Ensure Monaco editor container expands properly */
+.monaco-editor {
+  min-height: 24px !important;
+  height: auto !important;
+}
+
+/* Make sure the cell input area expands properly */
+.jp-cell-input {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Ensure output text is fully visible */
+.jp-cell-output-text {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: none !important;
+}
+
+/* Fix for image output */
+.output-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}

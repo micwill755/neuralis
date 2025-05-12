@@ -1,85 +1,328 @@
-.notebook {
-  padding: 20px;
+/* Jupyter Lab style notebook */
+.notebook-container {
+  background-color: white;
   height: 100%;
-  overflow-y: auto;
-  background-color: #ffffff;
+  overflow: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 .notebook-header {
-  margin-bottom: 20px;
-  padding-bottom: 10px;
+  background-color: #f8f8f8;
   border-bottom: 1px solid #e0e0e0;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.notebook-header h2 {
+.notebook-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.2rem;
   font-weight: 500;
+  color: #444;
+}
+
+.notebook-content {
+  padding: 10px 20px;
+}
+
+.add-cell-button {
+  background-color: transparent;
+  border: none;
+  border-radius: 2px;
+  padding: 4px 8px;
+  margin: 5px auto;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  color: #9e9e9e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-cell-button:hover {
+  background-color: #f1f1f1;
+}
+
+.add-cell-button::before {
+  content: "+";
+  margin-right: 5px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.button-group {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.notebook-button {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 2px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+}
+
+.notebook-button:hover {
+  background-color: #f1f1f1;
+}
+
+.notebook-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.run-button {
+  background-color: #f0f7ff;
+  border-color: #c8e1ff;
+  color: #0366d6;
+}
+
+.run-button:hover:not(:disabled) {
+  background-color: #dbeeff;
+}
+
+.run-button:disabled {
+  background-color: #f1f1f1;
+  border-color: #e0e0e0;
+  color: #9e9e9e;
+}
+
+/* Cell styling */
+.cell-container {
+  margin-bottom: 4px;
+  border-left: 5px solid transparent;
+  transition: background-color 0.2s ease;
+}
+
+.cell-container.active {
+  border-left-color: #2196f3;
+  background-color: #f5f9ff;
+}
+
+.cell-container:hover:not(.active) {
+  background-color: #f8f8f8;
+}
+
+.cell-prompt-area {
+  display: flex;
+  align-items: flex-start;
+}
+
+.cell-prompt {
+  width: 64px;
+  text-align: right;
+  padding: 8px 10px;
+  color: #303F9F;
+  font-family: monospace;
+  font-size: 0.9rem;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.cell-prompt.markdown {
+  color: #9E9E9E;
+}
+
+.cell-content-area {
+  flex-grow: 1;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cell-content-area:hover,
+.cell-content-area.active {
+  border-color: #ddd;
+}
+
+.cell-output {
+  background-color: #f8f8f8;
+  border-top: 1px solid #eee;
+  padding: 10px 10px 10px 74px;
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
   color: #333;
 }
 
-.cell-container {
-  margin-bottom: 12px;
+.cell-output.error {
+  background-color: #fff8f7;
+  color: #e53935;
 }
 
-.cell-actions {
-  display: flex;
-  justify-content: center;
-  padding: 4px 0;
-  opacity: 0;
-  transition: opacity 0.2s;
+.output-image {
+  max-width: 100%;
+  margin: 10px 0;
 }
 
-.cell-container:hover .cell-actions {
-  opacity: 1;
+/* Markdown styling */
+.markdown-content {
+  padding: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
-.cell-actions button {
-  background: none;
-  border: 1px solid #e0e0e0;
+.markdown-content h1, 
+.markdown-content h2, 
+.markdown-content h3, 
+.markdown-content h4, 
+.markdown-content h5, 
+.markdown-content h6 {
+  margin-top: 0;
+  font-weight: 500;
+}
+
+.markdown-content p {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.markdown-content pre {
+  background-color: #f6f8fa;
+  padding: 10px;
   border-radius: 3px;
-  padding: 2px 8px;
-  margin: 0 4px;
-  font-size: 12px;
-  cursor: pointer;
-  color: #555;
+  overflow-x: auto;
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-.cell-actions button:hover {
-  background-color: #f5f5f5;
+.markdown-content code {
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  background-color: #f6f8fa;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 85%;
 }
 
-.empty-notebook {
+/* Monaco editor customizations */
+.monaco-editor .margin {
+  background-color: white !important;
+}
+
+.monaco-editor .line-numbers {
+  display: none !important;
+}
+
+/* Kernel selector styling */
+.kernel-selector {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: #757575;
+  gap: 8px;
 }
 
-.add-first-cell {
-  margin-top: 20px;
+.kernel-label {
+  font-size: 0.85rem;
+  color: #666;
 }
 
-.add-first-cell button, .add-cell-bottom button {
-  background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 3px;
-  padding: 6px 12px;
-  margin: 0 5px;
-  cursor: pointer;
-  font-size: 13px;
+.kernel-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  background-color: white;
+  font-size: 0.85rem;
+  color: #444;
 }
 
-.add-first-cell button:hover, .add-cell-bottom button:hover {
-  background-color: #e0e0e0;
-}
-
-.add-cell-bottom {
+.kernel-status {
   display: flex;
-  justify-content: center;
-  margin-top: 20px;
-  padding-top: 10px;
-  border-top: 1px solid #f0f0f0;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-indicator.active {
+  background-color: #4caf50;
+}
+
+.status-indicator.inactive {
+  background-color: #9e9e9e;
+}
+/* HTML output styling */
+.html-output {
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 500px;
+}
+
+/* Keyboard shortcut hint */
+.keyboard-shortcut-hint {
+  font-size: 0.8em;
+  color: #666;
+  margin-left: 10px;
+}
+
+/* Running cell indicator */
+.cell-container.running {
+  border-left: 3px solid #4caf50;
+}
+
+/* Cell execution status */
+.execution-status {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.execution-status.success {
+  background-color: #4caf50;
+}
+
+.execution-status.error {
+  background-color: #f44336;
+}
+
+.execution-status.running {
+  background-color: #2196f3;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.cell-content {
+  min-height: 100px;
+  position: relative;
+}
+
+/* Dynamic editor height */
+.monaco-editor {
+  min-height: 100px !important;
+  width: 100% !important;
+}
+
+/* Make sure the editor container expands properly */
+.monaco-editor-container {
+  width: 100% !important;
+  min-height: 100px !important;
 }

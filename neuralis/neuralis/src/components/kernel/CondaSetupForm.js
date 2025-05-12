@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { createCondaEnvironment } from '../../services/kernelService';
 
 function CondaSetupForm({ onComplete, onBack, setIsLoading, setError }) {
   const [formData, setFormData] = useState({
     environmentName: 'neuralis-env',
-    pythonVersion: '3.12',
-    packages: 'numpy,pandas,matplotlib,scikit-learn',
+    pythonVersion: '3.10',
+    packages: 'numpy,pandas,matplotlib,scikit-learn'
   });
   
   const handleChange = (e) => {
@@ -22,15 +21,14 @@ function CondaSetupForm({ onComplete, onBack, setIsLoading, setError }) {
     setIsLoading(true);
     
     try {
-      // Execute conda commands to create environment
-      await createCondaEnvironment(formData);
+      // Simulate conda environment creation
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Create kernel configuration
       const config = {
         type: 'conda',
         environmentName: formData.environmentName,
         pythonVersion: formData.pythonVersion,
-        kernelPath: `~/.local/share/neuralis/kernels/${formData.environmentName}`,
         packages: formData.packages.split(',').map(pkg => pkg.trim()),
         timestamp: new Date().toISOString()
       };
@@ -58,6 +56,8 @@ function CondaSetupForm({ onComplete, onBack, setIsLoading, setError }) {
           name="environmentName" 
           value={formData.environmentName}
           onChange={handleChange}
+          pattern="[a-zA-Z0-9_\-]+"
+          title="Environment name can only contain letters, numbers, underscores, and hyphens"
           required
         />
       </div>
@@ -73,6 +73,7 @@ function CondaSetupForm({ onComplete, onBack, setIsLoading, setError }) {
           <option value="3.11">Python 3.11</option>
           <option value="3.10">Python 3.10</option>
           <option value="3.9">Python 3.9</option>
+          <option value="3.8">Python 3.8</option>
         </select>
       </div>
       
